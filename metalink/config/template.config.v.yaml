@@ -1,0 +1,122 @@
+Params_b_sample:
+  00_raw_stats:
+    threads: 4
+  01_trim:
+    threads: 16
+    length_required: 15
+    n_base_limit: 5
+    compression: 4
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra fastp or fastplong raw reads trimming
+  01_trim_stats:
+    threads: 16
+  02_assembly:
+    threads: 40
+    method: "megahit"
+    # method: "spades"
+    # method: "metaflye"
+  02_megahit:
+    presets: meta-sensitive        # meta-sensitive / meta-large
+    # min_count: 2                # DIY k-mer
+    # k_min: 21
+    # k_max: 141
+    # k_step: 12
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra MEGAHIT assembly
+  02_spades:
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra SPAdes assembly, e.g., --rna for RNA-Seq data
+  02_metaflye:
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra Flye assembly
+  03_mapping:
+    threads: 20
+    method: "minibwa"
+    # method: "bwamem2"
+    # method: "bwamem"
+    # method: "strobealign"
+    samtools_sort_mem: 768M
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra mapping aligner
+  07_contigs_depth:
+    threads: 8
+    min_read_percent_identity: 95
+    contig_end_exclusion: 75
+    min_contig_length: 300
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra prodigal for contigs
+
+Params_b_project:
+  01_cat_raw_stats:
+    threads: 4
+  02_cat_trimmed_stats:
+    threads: 4
+  03_contigs_stats:
+    threads: 4
+  04_merge_reads_contigs_stats:
+    threads: 4
+
+Params_v_sample:
+  01_virus_identify:
+    identify_method: "genomad_vs_vb"
+    virus_length_limit: 2000
+    threads: 8
+  03_taxonomy_CAT_pack:
+    range: 10
+    fraction: 0.50
+    threads: 8
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra CAT_pack contigs viral
+  03_mapping:
+    threads: 20
+    method: "minibwa"
+    # method: "bwamem2"
+    # method: "bwamem"
+    # method: "strobealign"
+    samtools_sort_mem: 768M
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra mapping aligner
+  04_binning:
+    threads: 8
+  05_checkv:
+    threads: 8
+  06_vclust:
+    ani: 0.95
+    threads: 8
+    prefilter_extra_args: ""
+    # prefilter_extra_args: "--custom-flag"   # user-supplied extra vclust prefilter
+    align_extra_args: ""
+    # align_extra_args: "--custom-flag"   # user-supplied extra vclust align
+    cluster_extra_args: ""
+    # cluster_extra_args: "--custom-flag"   # user-supplied extra vclust cluster
+  07_iPHoP:
+    threads: 20
+  08_taxonomy_BAT:
+    range: 10
+    fraction: 0.50
+    threads: 8
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra CAT_pack bins viral
+  09_coverm_eachsample_vMAGs:
+    method: "trimmed_mean"
+    min_read_percent_identity: 95
+    min_read_aligned_length: 45
+    contig_end_exclusion: 75
+    threads: 8
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra coverm genome sample-level viral
+
+Params_v_project:
+  06_vclust:
+    ani: 0.95
+    threads: 8
+    prefilter_extra_args: ""
+    # prefilter_extra_args: "--custom-flag"   # user-supplied extra vclust prefilter
+    align_extra_args: ""
+    # align_extra_args: "--custom-flag"   # user-supplied extra vclust align
+    cluster_extra_args: ""
+    # cluster_extra_args: "--custom-flag"   # user-supplied extra vclust cluster
+  07_iPHoP:
+    custom_MAGs_dir: "none"
+    #custom_MAGs_dir: /path/to/MAGs/
+    threads: 60

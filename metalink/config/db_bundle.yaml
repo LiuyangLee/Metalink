@@ -1,0 +1,167 @@
+# Metalink database bundle manifest
+#
+# This file is the single source of truth for the database versions that are
+# pinned to a given Metalink release.  The setup workflow (rules/setup.smk)
+# reads this manifest to build download URLs, extraction directories and marker
+# file names.
+#
+# When a new Metalink release ships with updated reference databases, create a
+# new bundle entry rather than editing the existing one, so that older Metalink
+# versions continue to point at the exact database bundle they were tested
+# with.
+
+bundle_version: "v20250930"
+# ---------------------------------------------------------------------------
+# Metalink-built databases
+#
+# Checksums: each archive is expected to have a sibling .md5 file next to its
+# URL on the server (standard md5sum output format, e.g. kraken2_raw.tar.gz.md5).
+# rules/setup.smk downloads it together with the archive and verifies the
+# archive before extraction.
+#
+# Optionally, an entry may instead pin the checksum here: 'md5' at the entry
+# level, or per size variant at size_variants.<size>.md5.  A manifest md5 takes
+# priority over the downloaded .md5 file.  Always quote the value
+# (md5: "1bc29b36f623ba82aaf6724fd3b16718") so YAML keeps it a string.
+# ---------------------------------------------------------------------------
+metalink_built_databases:
+  kraken2_taxonomy:
+    version: v20250930
+    dir: kraken2_taxonomy_db
+    # {size} is substituted with the size variant requested by the user.
+    archive_prefix: kraken2_taxonomy_db/v20250930/{size}.tar.gz
+    size_variants:
+      kraken2_raw:
+        url: "https://dme3lab1metalink.sjtu.edu.cn/v20250930/kraken2_taxonomy_db/kraken2_raw.tar.gz"
+      kraken2_16GB:
+        url: "https://dme3lab1metalink.sjtu.edu.cn/v20250930/kraken2_taxonomy_db/kraken2_16GB.tar.gz"
+      kraken2_64GB:
+        url: "https://dme3lab1metalink.sjtu.edu.cn/v20250930/kraken2_taxonomy_db/kraken2_64GB.tar.gz"
+      kraken2_256GB:
+        url: "https://dme3lab1metalink.sjtu.edu.cn/v20250930/kraken2_taxonomy_db/kraken2_256GB.tar.gz"
+    markers:
+      - "{size}/hash.k2d"
+      - "{size}/opts.k2d"
+      - "{size}/taxo.k2d"
+      - "{size}/seqid2taxid.map"
+      - "{size}/database50mers.kraken"
+      - "{size}/database50mers.kmer_distrib"
+      - "{size}/database75mers.kraken"
+      - "{size}/database75mers.kmer_distrib"
+      - "{size}/database100mers.kraken"
+      - "{size}/database100mers.kmer_distrib"
+      - "{size}/database125mers.kraken"
+      - "{size}/database125mers.kmer_distrib"
+      - "{size}/database150mers.kraken"
+      - "{size}/database150mers.kmer_distrib"
+      - "{size}/database200mers.kraken"
+      - "{size}/database200mers.kmer_distrib"
+      - "{size}/database250mers.kraken"
+      - "{size}/database250mers.kmer_distrib"
+      - "{size}/database300mers.kraken"
+      - "{size}/database300mers.kmer_distrib"
+      - "{size}/taxonomy/taxid_tax_lineage.tsv.gz"
+
+  kraken2_function:
+    version: v20250930
+    dir: kraken2_function_db
+    archive_prefix: kraken2_function_db/v20250930/{size}.tar.gz
+    size_variants:
+      kraken2_raw:
+        url: "https://dme3lab1metalink.sjtu.edu.cn/v20250930/kraken2_function_db/kraken2_raw.tar.gz"
+      kraken2_16GB:
+        url: "https://dme3lab1metalink.sjtu.edu.cn/v20250930/kraken2_function_db/kraken2_16GB.tar.gz"
+    markers:
+      - "{size}/hash.k2d"
+      - "{size}/opts.k2d"
+      - "{size}/taxo.k2d"
+      - "{size}/seqid2taxid.map"
+      - "{size}/taxonomy/taxid_fun_lineage.tsv.gz"
+
+  cat_pack_db:
+    version: v20250930
+    dir: cat_pack_db
+    archive: cat_pack_db/v20250930.tar.gz
+    url: "https://dme3lab1metalink.sjtu.edu.cn/v20250930/cat_pack_db.tar.gz"
+    markers:
+      - "cat_pack_gtdb_ncbi_ictv/db"
+      - "cat_pack_gtdb_ncbi_ictv/tax"
+      - "cat_pack_ictv/db"
+      - "cat_pack_ictv/tax"
+
+
+# ---------------------------------------------------------------------------
+# Third-party databases
+# ---------------------------------------------------------------------------
+third_party_databases:
+  eggnog:
+    version: "5.0.2"
+    target_dir: eggnog_db/v5.0.2
+    base_url: "http://eggnog.embl.de/download/emapperdb-{version}/"
+    files:
+      - eggnog.db.gz
+      - eggnog_proteins.dmnd.gz
+      - eggnog.taxa.tar.gz
+      - mmseqs.tar.gz
+    markers:
+      - eggnog.db
+      - eggnog_proteins.dmnd
+
+  genomad:
+    version: "v1.9"
+    target_dir: genomad_db/genomad_db_v1.9
+    # geNomad downloads into a directory named 'genomad_db' under DB_DIR.
+    # The setup rule moves it under genomad_db/ and renames it with the
+    # actual database version from the archive (v1.9).
+    download_subdir: genomad_db
+    markers: []
+
+  checkv:
+    version: "v1.5"
+    target_dir: checkv_db/checkv-db-v1.5
+    # CheckV downloads into a directory named 'checkv-db-v1.5' under DB_DIR.
+    # The default name already contains the version, so we keep it and just
+    # place it under the standard checkv_db/ parent directory.
+    download_subdir: checkv-db-v1.5
+    markers: []
+
+  vibrant:
+    version: "v1.2.1"
+    target_dir: vibrant_db/v1.2.1
+    markers:
+      - databases
+      - files
+
+  iphop:
+    version: "Jun_2025_pub_rw"
+    target_dir: iphop_db/Jun_2025_pub_rw
+    archive_url: "https://portal.nersc.gov/cfs/m342/iphop/db/iPHoP.latest_rw.tar.gz"
+    # The extracted top-level directory name changes with iPHoP releases.
+    extracted_dir_pattern: "*pub_rw"
+    markers: []
+
+  gtdbtk:
+    version: "R226"
+    target_dir: gtdbtk_db/R226
+    archive_url: "https://data.ace.uq.edu.au/public/gtdb/data/releases/release226/226.0/auxillary_files/gtdbtk_package/full_package/gtdbtk_r226_data.tar.gz"
+    extracted_dir: release226
+    markers: []
+
+  checkm:
+    version: "2015_01_16"
+    target_dir: checkm_db/checkm_data_2015_01_16
+    archive_url: "https://data.ace.uq.edu.au/public/CheckM_databases/checkm_data_2015_01_16.tar.gz"
+    markers: []
+
+  virsorter:
+    version: "v2.2.4"
+    target_dir: virsorter2_db/v2.2.4
+    markers: []
+
+  checkm2:
+    version: "v1.1.0"
+    target_dir: checkm2_db/v1.1.0
+    # CheckM2 downloads into a directory named 'CheckM2_database' under DB_DIR.
+    download_subdir: CheckM2_database
+    markers:
+      - CheckM2_database/uniref100.KO.1.dmnd

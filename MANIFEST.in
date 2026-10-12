@@ -1,0 +1,16 @@
+include README.md
+include LICENSE*
+graft metalink/scripts
+graft metalink/rules
+graft metalink/rules_p
+graft metalink/rules_s
+graft metalink/targets_p
+graft metalink/targets_s
+graft metalink/config
+graft metalink/envs
+include metalink/Snakefile
+exclude metalink/envs.mamba_install_manually.list
+exclude README.GITHUB_INTRO.md
+exclude Fig.*.png
+global-exclude __pycache__
+global-exclude *.py[cod]

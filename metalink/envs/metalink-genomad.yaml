@@ -1,0 +1,6 @@
+name: metalink-genomad-1.12.0
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - genomad =1.12.0

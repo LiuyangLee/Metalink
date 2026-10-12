@@ -1,0 +1,85 @@
+##########################################################################################
+####  ||\\//||  ||====||  ||====||    //\\    ||        ||====||  ||\\  ||  ||   /||  ####
+####  || VV ||  ||           ||      //  \\   ||           ||     || \\ ||  ||  / ||  ####
+####  || || ||  ||====||     ||     ||====||  ||           ||     ||  \\||  || /  ||  ####
+####  || || ||  ||           ||     ||    ||  ||           ||     ||   \||  || \  ||  ####
+####  || || ||  ||====||     ||     ||    ||  ||====||  ||====||  ||    ||  ||  \ ||  ####
+##########################################################################################
+
+Directory:
+  work: "./"
+  script:
+    metalink: "scripts/"
+    kegg_modules_ko_info_path: 'scripts/mclink-scripts/modules_ko_info.tsv'
+    KO_length_ref_path: 'scripts/KO_faa_seq_length_summary.tsv.gz'
+  database:
+    # DBDIR is only used to resolve the relative database paths in this section.
+    # If every path below is given as an absolute path, DBDIR has no effect.
+    DBDIR: "/home/database/metalink_db"
+    # You can override any individual path with an absolute path.
+    # e.g., kraken2_taxonomy_db: '/data/metalink_db/kraken2_taxonomy_db/kraken2_64GB/'
+    # Kraken2 size variants (must match the version downloaded with
+    # `metalink download-database --kraken2-taxonomy-db-size ...`):
+    #   kraken2_taxonomy_db_size: kraken2_16GB / kraken2_64GB / kraken2_256GB / kraken2_raw
+    #   kraken2_function_db_size: kraken2_16GB / kraken2_raw
+    # Leave kraken2_taxonomy_db_size and kraken2_function_db_size empty to auto-detect the
+    # downloaded size from DBDIR/.metalink_db_sizes.yaml. If a size is set here, it takes priority.
+    # If neither is set and no size has been downloaded, kraken2_raw is used.
+    kraken2_taxonomy_db_size: ''
+    kraken2_function_db_size: ''
+    cat_pack_db: 'cat_pack_db/v20250930/'
+    eggnog_db: 'eggnog_db/v5.0.2/'
+    gtdbtk_db: 'gtdbtk_db/R226/'
+    checkm2_db: 'checkm2_db/v1.1.0/uniref100.KO.1.dmnd'
+    checkv_db: 'checkv_db/checkv-db-v1.5/'
+    genomad_db: 'genomad_db/genomad_db_v1.9/'
+    virsorter2_db: 'virsorter2_db/v2.2.4/'
+    vibrant_db: 'vibrant_db/v1.2.1/'
+    iphop_db: 'iphop_db/Jun_2025_pub_rw/'
+
+# Mapping from Metalink-internal env keys (used by the workflow rules) to the
+# actual conda environment names.  The values must match the 'name:' field of
+# the corresponding metalink/envs/<key>.yaml file.  Naming convention:
+# multi-tool bundle envs carry the Metalink major.minor version (change only
+# on big releases), single-tool envs carry the tool version.  You may point a
+# key at a differently-named environment of your own here.
+conda_envs:
+  metalink-main: "metalink-main-0.3"
+  metalink-annotation: "metalink-annotation-0.3"
+  metalink-binning: "metalink-binning-0.3"
+  metalink-gtdbtk: "metalink-gtdbtk-2.4.1"
+  metalink-checkm2: "metalink-checkm2-1.1.0"
+  metalink-vclust: "metalink-vclust-1.3.1"
+  metalink-genomad: "metalink-genomad-1.12.0"
+  metalink-vibrant: "metalink-vibrant-1.2.1"
+  metalink-virsorter: "metalink-virsorter-2.2.4"
+  metalink-vrhyme: "metalink-vrhyme-1.1.0"
+  metalink-iphop: "metalink-iphop-1.4.1"
+
+name_project: ["test.metalink"]
+run_project: False
+jobs: 1
+read_type: "paired"  # paired, single, paired-rna, single-rna, pacbio-raw, pacbio-corr, pacbio-hifi, nano-raw, nano-corr, nano-hq
+taxonomy_rank: ["Phylum", "Class", "Order", "Family", "Genus", "Species"]
+skip_level: 0
+# Maximum number of kraken2 taxonomy jobs to run concurrently (kraken2 taxonomy rules are
+# resource-tagged kraken2_taxonomy=1; applied as a Snakemake global resource limit).
+# CLI equivalent: --kraken2-taxonomy-jobs N. null/absent = unlimited.
+kraken2_taxonomy_jobs: null
+
+# Whether to keep large intermediate files after they are no longer needed,
+# toggled per category. CLI flags (--delete-bam, --keep-drep-data,
+# --keep-vs2-iter0, --keep-assembly-intermediate) override the corresponding
+# value when a config is generated.
+keep_intermediate:
+  # Mapping BAMs (b-sample, v-sample, cr/vcr/mcr/vmcr unmapped-reads BAMs, and the
+  # project-reference BAMs of the pmr chains under pmr_m/pmr_v/pmr_vm-sample).
+  bam: true
+  # data/ working subdirectories (MASH/prodigal/checkM files) of the sample- and project-level dRep results;
+  drep_data: false
+  # VirSorter2 iter-0 working directories under v-sample 01_identification.
+  vs2_iter0: false
+  # Assembler-internal intermediates under b-sample/02_assembly (MEGAHIT intermediate_contigs/, SPAdes K*/corrected/tmp/misc,
+  # Flye 00-assembly/10-consensus/20-repeat/30-contigger/40-polishing) and
+  # the metaWRAP binning work_files/assembly copy.
+  assembly: false

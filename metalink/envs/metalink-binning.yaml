@@ -1,0 +1,17 @@
+name: metalink-binning-0.3
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+dependencies:
+  - python =2.7
+  - bwa =0.7.17
+  - samtools =1.9
+  - metabat2 =2.12.1
+  - maxbin2 =2.2.6
+  - concoct =1.0.0
+  - prodigal =2.6.3
+  - pigz =2.6
+  - checkm-genome =1.0.12
+  - seqkit =2.8.2
+  - blas=2.5=mkl

@@ -1,0 +1,29 @@
+cd /data1/liliuyang/snakemake/metalink_history/Metalink-0.3.7
+
+# metalink main env
+mamba env create -f metalink/envs/metalink-main.yaml
+# Make sure to install the R package mclink before running Metalink.
+# This must be done by the user/account that owns the conda env:
+#   conda activate metalink-main-0.3
+#   R
+#   install.packages("mclink")
+
+# for binning-related modes
+mamba env create -f metalink/envs/metalink-binning.yaml
+# Make sure to set the CheckM database root before running Metalink.
+# This must be done by the user/account that owns the conda env:
+#   conda activate metalink-binning-0.3
+#   checkm data setRoot /path/to/checkm_db/ # e.g., checkm data setRoot /data/database/metalink_db/checkm_db/checkm_data_2015_01_16
+
+# for MAG-related modes
+mamba env create -f metalink/envs/metalink-annotation.yaml
+mamba env create -f metalink/envs/metalink-gtdbtk.yaml
+mamba env create -f metalink/envs/metalink-checkm2.yaml
+
+# for virus-related modes
+mamba env create -f metalink/envs/metalink-genomad.yaml
+mamba env create -f metalink/envs/metalink-vclust.yaml
+mamba env create -f metalink/envs/metalink-vibrant.yaml
+mamba env create -f metalink/envs/metalink-virsorter.yaml
+mamba env create -f metalink/envs/metalink-vrhyme.yaml
+mamba env create -f metalink/envs/metalink-iphop.yaml

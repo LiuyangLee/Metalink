@@ -1,0 +1,95 @@
+import sys
+
+# Detect graph-generation mode: stdout must be pure DOT syntax for `dot`
+_is_graph_mode = any(arg in sys.argv for arg in ['--rulegraph', '--dag', '--filegraph'])
+
+def log_info(*args, **kwargs):
+    """Print to stderr only when not generating DAG/rulegraph."""
+    if not _is_graph_mode:
+        kwargs.setdefault('file', sys.stderr)
+        print(*args, **kwargs)
+
+import os
+
+path = config["Directory"]["work"]
+path = os.path.join(path, '')
+os.makedirs(path, exist_ok=True)
+os.chdir(path)
+log_info(f"Working directory is set to: {os.getcwd()}")
+
+mode = config.get("mode", "b")
+read_type = config.get("read_type", "paired")
+
+# Derive database sub-paths that metalink deliberately leaves out of the
+# generated config (they follow a fixed layout under the base paths; an
+# explicitly configured value always wins).
+_db = config["Directory"]["database"]
+_db.setdefault("taxid_tax_path", os.path.join(_db["kraken2_taxonomy_db"], "taxonomy", "taxid_tax_lineage.tsv.gz"))
+_db.setdefault("taxid_fun_path", os.path.join(_db["kraken2_function_db"], "taxonomy", "taxid_fun_lineage.tsv.gz"))
+_db.setdefault("CAT_taxonomy_db", os.path.join(_db["cat_pack_db"], "cat_pack_gtdb_ncbi_ictv", "db") + "/")
+_db.setdefault("CAT_taxonomy_tax", os.path.join(_db["cat_pack_db"], "cat_pack_gtdb_ncbi_ictv", "tax") + "/")
+_db.setdefault("CAT_taxonomy_virus_db", os.path.join(_db["cat_pack_db"], "cat_pack_ictv", "db") + "/")
+_db.setdefault("CAT_taxonomy_virus_tax", os.path.join(_db["cat_pack_db"], "cat_pack_ictv", "tax") + "/")
+
+# concurrent cap for kraken2 taxonomy jobs (config key kraken2_taxonomy_jobs,
+# CLI --kraken2-taxonomy-jobs); absent = unlimited
+if config.get('kraken2_taxonomy_jobs'):
+    workflow.global_resources['kraken2_taxonomy'] = int(config['kraken2_taxonomy_jobs'])
+
+# 1. Include common initialization files (not logged as mode files)
+if 'workflow_common_includes' in config:
+    common_files = config['workflow_common_includes']
+    for smk in common_files:
+        include: smk
+
+# 2. Include mode-specific rule files
+workflow_files = config['workflow_includes']
+
+log_info("=== Snakefile Input ===")
+log_info(f"mode: {mode}")
+log_info(f"read_type: {read_type}")
+for smk in workflow_files:
+    log_info(f"include: {smk}")
+    include: smk
+
+# 3. Include mode-specific target file (end_target rule)
+if 'workflow_target' in config:
+    target_file = config['workflow_target']
+    log_info(f"include: {target_file}")
+    include: target_file
+
+# Determine target rule name
+# Priority: 1. {mode}_end_target (new naming)
+#          2. {last_file}_target (old naming, backward compatibility)
+last_mode = workflow_files[-1].replace('-', '_').replace('.smk', '')
+
+_target_name = f"{mode}_end_target"
+if not hasattr(rules, _target_name):
+    _target_name = f"{last_mode}_target"
+
+log_info(f"target_rule: {_target_name}")
+
+rule all:
+    input: getattr(rules, _target_name).input
+
+onsuccess:
+    print('Metalink run finished')
+onerror:
+    if os.path.isfile('EARLY-EXIT'):
+        sys.stderr.write('\n\n')
+        sys.stderr.write(
+                '*** This is NOT an bug; the Metalink run exited early due to specific condition of this sample; check the messages (INFO) above for more specific reasons; generally you can discard this sample\n\n'
+        )
+    else:
+        sys.stderr.write('\n\n')
+        sys.stderr.write(
+                '*** An error occurred. Detailed errors may not be printed '
+                'for certain rules. Refer to the log file of the failed '
+                'command for troubleshooting\n'
+        )
+        sys.stderr.write(
+                'Issues can be raised at: '
+                'https://github.com/LiuyangLee/Metalink/issues\n'
+                'Or send an email to Metalink near gmail.com if '
+                'you do not use GitHub\n\n'
+        )

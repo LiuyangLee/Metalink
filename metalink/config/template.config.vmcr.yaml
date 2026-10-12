@@ -1,0 +1,298 @@
+Params_b_sample:
+  00_raw_stats:
+    threads: 4
+  01_trim:
+    threads: 16
+    length_required: 15
+    n_base_limit: 5
+    compression: 4
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra fastp or fastplong raw reads trimming
+  01_trim_stats:
+    threads: 16
+  02_assembly:
+    threads: 40
+    method: "megahit"
+    # method: "spades"
+    # method: "metaflye"
+  02_megahit:
+    presets: meta-sensitive        # meta-sensitive / meta-large
+    # min_count: 2                # DIY k-mer
+    # k_min: 21
+    # k_max: 141
+    # k_step: 12
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra MEGAHIT assembly
+  02_spades:
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra SPAdes assembly, e.g., --rna for RNA-Seq data
+  02_metaflye:
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra Flye assembly
+  03_mapping:
+    threads: 20
+    method: "minibwa"
+    # method: "bwamem2"
+    # method: "bwamem"
+    # method: "strobealign"
+    samtools_sort_mem: 768M
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra mapping aligner
+  05_metawrap_binning_depth:
+    threads: 8
+    min_read_percent_identity: 97
+    contig_end_exclusion: 75
+    min_contig_length: 1500
+    binning_tools: "metabat2,maxbin2,concoct"
+    max_memory_gb: 512
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra metaWRAP binning
+  06_metawrap_bin_refinement:
+    max_memory_gb: 512
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra metaWRAP bin_refinement
+  06_bin_checkm:
+    threads: 8
+    min_completeness: 50
+    max_contamination: 10
+    # bins must additionally pass a quality score filter: QS = completeness - 5*contamination >= min_quality_score
+    min_quality_score: 50
+  07_contigs_depth:
+    threads: 8
+    min_read_percent_identity: 95
+    contig_end_exclusion: 75
+    min_contig_length: 300
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra prodigal for contigs
+  08_bin_prodigal:
+    threads: 8
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra prodigal for MAGs
+
+Params_b_project:
+  01_cat_raw_stats:
+    threads: 4
+  02_cat_trimmed_stats:
+    threads: 4
+  03_contigs_stats:
+    threads: 4
+  04_merge_reads_contigs_stats:
+    threads: 4
+  05_gather_project_bin_checkm_stats:
+    threads: 4
+
+Params_v_sample:
+  01_virus_identify:
+    identify_method: "genomad_vs_vb"
+    virus_length_limit: 2000
+    threads: 8
+  03_taxonomy_CAT_pack:
+    range: 10
+    fraction: 0.50
+    threads: 8
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra CAT_pack contigs viral
+  03_mapping:
+    threads: 20
+    method: "minibwa"
+    # method: "bwamem2"
+    # method: "bwamem"
+    # method: "strobealign"
+    samtools_sort_mem: 768M
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra mapping aligner
+  04_binning:
+    threads: 8
+  05_checkv:
+    threads: 8
+  06_vclust:
+    ani: 0.95
+    threads: 8
+    align_extra_args: ""
+    # align_extra_args: "--custom-flag"   # user-supplied extra vclust align
+    cluster_extra_args: ""
+    # cluster_extra_args: "--custom-flag"   # user-supplied extra vclust cluster
+    prefilter_extra_args: ""
+    # prefilter_extra_args: "--custom-flag"   # user-supplied extra vclust prefilter
+  07_iPHoP:
+    threads: 20
+  08_taxonomy_BAT:
+    range: 10
+    fraction: 0.50
+    threads: 8
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra 08_taxonomy_BAT
+  09_coverm_eachsample_vMAGs:
+    method: "trimmed_mean"
+    min_read_percent_identity: 95
+    min_read_aligned_length: 45
+    contig_end_exclusion: 75
+    threads: 8
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra 09_coverm_eachsample_vMAGs
+
+Params_m_sample:
+  01_checkm2:
+    threads: 60
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra checkm2 predict
+  02_taxonomy:
+    threads: 60
+    MAGs_taxonomy_classify_method: "gtdbtk" #BAT
+  02_taxonomy_gtdbtk:
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra GTDB-Tk classify
+  02_taxonomy_BAT:
+    range: 10
+    fraction: 0.50
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra CAT_pack bins
+  05_drep_eachsample_99:
+    comp: 50
+    con: 10
+    sa: 0.99
+    threads: 20
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra dRep dereplicate sample 99
+  06_drep_eachsample_95:
+    comp: 50
+    con: 10
+    sa: 0.95
+    threads: 20
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra dRep dereplicate sample 95
+  07_coverm_eachsample:
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra coverm genome sample-level
+    method: "trimmed_mean"
+    min_read_percent_identity: 95
+    min_read_aligned_length: 45
+    contig_end_exclusion: 75
+    threads: 20
+  08_function:
+    threads: 60
+    MAGs_function_classify_method: "emapper"
+  08_function_kraken2:
+    confidence: 0.05
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra kraken2
+  08_function_emapper:
+    seed_ortholog_evalue: 1e-10
+    method: "diamond"
+    #method: "mmseqs"
+    query_cover: 30
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra eggNOG-mapper
+
+Params_c_sample:
+  01_taxonomy:
+    threads: 60
+    #contigs_taxonomy_classify_method: "CAT_pack"
+    contigs_taxonomy_classify_method: "kraken2"
+  01_taxonomy_CAT_pack:
+    range: 10
+    fraction: 0.50
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra CAT_pack contigs
+  01_taxonomy_kraken2:
+    confidence: 0.7
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra kraken2
+  02_function:
+    threads: 60
+    contigs_function_classify_method: kraken2
+  02_function_emapper:
+    seed_ortholog_evalue: 1e-10
+    method: "diamond"
+    #method: "mmseqs"
+    query_cover: 30
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra 02_function_emapper
+  02_function_kraken2:
+    confidence: 0.05
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra kraken2
+
+Params_vmcr_sample:
+  01_unmapped_reads_trim_merge:
+    threads: 16
+    length_required: 15
+    n_base_limit: 5
+    compression: 4
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra fastp unmapped reads trimming
+  02_FragGeneScanRs:
+    model: "illumina_1"
+    threads: 20
+  02_FragGeneScanRs_stats:
+    threads: 10
+  03_taxonomy:
+    threads: 60
+  03_taxonomy_kraken2:
+    confidence: 0.7
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra kraken2
+  04_function:
+    threads: 60
+    #reads_function_classify_method: "emapper"
+    reads_function_classify_method: "kraken2"
+  04_function_kraken2:
+    confidence: 0.05
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra kraken2
+  04_function_emapper:
+    seed_ortholog_evalue: 1e-10
+    method: "diamond"
+    #method: "mmseqs"
+    query_cover: 30
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra eggNOG-mapper
+  05_merge_tax_fun_depth:
+    MAGs_min_completeness1: 50
+    MAGs_max_contamination1: 1
+    MAGs_min_completeness2: 50
+    MAGs_max_contamination2: 1
+    minORFLen: 50
+    checkv_quality: "High-quality" #"Complete, High-quality, Medium-quality, Low-quality, Not-determined (default: High-quality)"
+    KO_mode: "ignore_multiple_KOs"
+    #KO_mode: "keep_multiple_KOs", "split_multiple_KOs", "ignore_multiple_KOs", "split_multiple_KOs", "ignore_multiple_KOs"
+    min_KO_num_in_one_taxon: 100
+    CAMI_format_output: false
+    output_detail: false
+    threads: 20
+  06_mclink_taxon:
+    min_KO_num_in_one_taxon: 100
+    min_mean_KO_RA_in_one_taxon: 0
+    completeness_threshold: 0.5 # 0-1
+    plus_scale_method: "mean" # 'mean', 'max', or 'min'
+    comma_scale_method: "sum" # e.g., 'max' for presence/absence data, or 'sum' for abundance data"
+    TopN: 100
+
+Params_vmcr_project:
+  01_Taxa_visualize:
+    TopN: 10
+  03_Fun_visualize:
+    TopN: 10
+  03_mclink_sample:
+    min_sample_num_per_KO: 1
+    preva: 0
+    abund: 0
+    completeness_threshold: 0.5 # 0-1
+    plus_scale_method: "mean" # 'mean', 'max', or 'min'
+    comma_scale_method: "sum" # e.g., 'max' for presence/absence data, or 'sum' for abundance data"
+  05_merge_tax_KO_depth:
+    preva: 0.10
+    abund: 0.0 # TPM/GPM sum of a sample is 1e6
+  05_merge_tax_Module_RelativeAbundance:
+    preva: 0.10
+    abund: 0.0 # TPM/GPM sum of a sample is 1e6
+  05_merge_tax_Module_SumCoverage:
+    preva: 0.10
+    abund: 0.0 # TPM/GPM sum of a sample is 1e6
+  06_mclink_taxon:
+    min_KO_num_in_one_taxon: 100
+    min_mean_KO_RA_in_one_taxon: 0
+    completeness_threshold: 0.5 # 0-1
+    plus_scale_method: "mean" # 'mean', 'max', or 'min'
+    comma_scale_method: "sum" # e.g., 'max' for presence/absence data, or 'sum' for abundance data"
+    TopN: 100

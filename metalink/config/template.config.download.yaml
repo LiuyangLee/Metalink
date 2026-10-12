@@ -1,0 +1,38 @@
+##########################################################################################
+####  ||\\//||  ||====||  ||====||    //\\    ||        ||====||  ||\\  ||  ||   /||  ####
+####  || VV ||  ||           ||      //  \\   ||           ||     || \\ ||  ||  / ||  ####
+####  || || ||  ||====||     ||     ||====||  ||           ||     ||  \\||  || /  ||  ####
+####  || || ||  ||           ||     ||    ||  ||           ||     ||   \||  || \  ||  ####
+####  || || ||  ||====||     ||     ||    ||  ||====||  ||====||  ||    ||  ||  \ ||  ####
+##########################################################################################
+
+# Metalink download-database configuration.
+# Generate an editable copy with:
+#   metalink download-database --generate-config -d <DBDIR>
+# Run from an edited copy with:
+#   metalink download-database -c <DBDIR>/config/config.download.yaml
+
+mode: download
+
+Directory:
+  database:
+    # Directory where database archives are downloaded and extracted.
+    DBDIR: "/home/database/metalink_db"
+
+# Databases to download; delete the lines you do not need.
+Databases:
+  - kraken2_taxonomy
+  - kraken2_function
+  - cat_pack_db
+  - eggnog
+  - gtdbtk
+  - checkm
+  - checkm2
+  - checkv
+  - genomad
+  - vibrant
+  - virsorter
+  - iphop
+
+Kraken2_taxonomy_db_size: kraken2_raw
+Kraken2_function_db_size: kraken2_raw

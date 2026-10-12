@@ -1,0 +1,18 @@
+rule b_end_target:
+    input:
+        s_raw_stats_r1 = expand(path + 'results/b-sample/00_raw_stats/{sample}_raw_s.fastq.stats', sample=SAMPLE_INDEX),
+        s_trim_r1 = expand(path + 'results/b-sample/01_trim/{sample}_trimmed_s.fastq.gz', sample=SAMPLE_INDEX),
+        s_trim_stats_r1 = expand(path + 'results/b-sample/01_trim_stats/{sample}_trimmed_s.fastq.stats', sample=SAMPLE_INDEX),
+        s_mk_022= expand(path + 'markers/b-sample/03_assembly_filter/{sample}.mk', sample=SAMPLE_INDEX),
+        s_tv_03 = expand(path + 'results/b-sample/04_bam_summary/{sample}.contigs_bam_stats.tsv', sample=SAMPLE_INDEX),
+        s_fa_05 = expand(path + 'results/b-sample/07_contigs/contigs_fna/{sample}.fna', sample=SAMPLE_INDEX),
+        s_tv_06 = expand(path + 'results/b-sample/08_gather_bin_high_quality/checkm_stats/{sample}.csv', sample=SAMPLE_INDEX),
+        s_mk_07 = expand(path + 'markers/b-sample/08_bin_prodigal/{sample}.mk', sample=SAMPLE_INDEX),
+        p_mk_11 =  expand(path + 'results/b-project/01_cat_raw_stats/{project}/01_raw_reads_stats.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
+        p_mk_12 =  expand(path + 'results/b-project/02_cat_trimmed_stats/{project}/02_clean_reads_stats.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
+        p_mk_13 =  expand(path + 'markers/b-project/03_contigs_stats/{project}/03_contigs_stats.mk', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
+        p_mk_14 =  expand(path + 'results/b-project/04_merge_reads_contigs_stats/{project}/04_reads_contigs_ffn_stats.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
+        p_mk_15 =  expand(path + 'results/b-project/05_gather_project_bin_checkm_stats/{project}/05_checkm_high_quality_bins.csv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
+        s_mk_08 = expand(path + 'markers/b-sample/12_delete_bam/{sample}.mk', sample=SAMPLE_INDEX) if not keep_intermediate('bam') else [],
+        s_b_mk_03 = expand(path + 'markers/b-sample/03_delete_assembly_intermediate/{sample}.mk', sample=SAMPLE_INDEX) if config.get('skip_level', 0) < 2 and not keep_intermediate('assembly') else [],
+        s_mk_15 = expand(path + 'markers/b-sample/12_delete_metawrap_work_files/{sample}.mk', sample=SAMPLE_INDEX) if config.get('skip_level', 0) < 3 and not keep_intermediate('assembly') else [],

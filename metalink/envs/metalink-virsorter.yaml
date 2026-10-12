@@ -1,0 +1,7 @@
+name: metalink-virsorter-2.2.4
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - virsorter =2.2.4
+  # VirSorter2 database must be downloaded separately (virsorter2 setup -d).

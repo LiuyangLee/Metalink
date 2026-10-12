@@ -1,0 +1,101 @@
+Params_b_sample:
+  00_raw_stats:
+    threads: 4
+  01_trim:
+    threads: 16
+    length_required: 15
+    n_base_limit: 5
+    compression: 4
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra fastp or fastplong raw reads trimming
+  01_trim_stats:
+    threads: 16
+
+Params_b_project:
+  01_cat_raw_stats:
+    threads: 4
+  02_cat_trimmed_stats:
+    threads: 4
+
+Params_r_sample:
+  00_target_stage: "all"
+  00_sample_reads:
+    target_reads: 0   # 目标抽样 read 数，0 或省略表示不抽样，10,000,000 大约对应1G压缩文件这个数量级
+    sample_seed: 6
+  01_sampled_reads_trim_merge:
+    threads: 16
+    length_required: 15
+    n_base_limit: 5
+    compression: 4
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra fastp sampled reads trimming
+  02_FragGeneScanRs:
+    model: "illumina_1"
+    threads: 20
+  02_FragGeneScanRs_stats:
+    threads: 10
+  03_taxonomy:
+    threads: 60
+  03_taxonomy_kraken2:
+    confidence: 0.6
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra kraken2
+  04_function:
+    threads: 60
+    #reads_function_classify_method: "emapper"
+    reads_function_classify_method: "kraken2"
+  04_function_kraken2:
+    confidence: 0.00
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra kraken2
+  04_function_emapper:
+    seed_ortholog_evalue: 1e-10
+    method: "diamond"
+    #method: "mmseqs"
+    query_cover: 30
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra eggNOG-mapper
+  05_merge_tax_fun_depth:
+    minORFLen: 50
+    KO_mode: "ignore_multiple_KOs"
+    #KO_mode: "keep_multiple_KOs", "split_multiple_KOs", "ignore_multiple_KOs"
+    min_KO_num_in_one_taxon: 100
+    CAMI_format_output: false
+    output_detail: false
+    threads: 60
+  06_mclink_taxon:
+    min_KO_num_in_one_taxon: 100
+    min_mean_KO_RA_in_one_taxon: 0
+    completeness_threshold: 0.5 # 0-1
+    plus_scale_method: "mean" # 'mean', 'max', or 'min'
+    comma_scale_method: "sum" # e.g., 'max' for presence/absence data, or 'sum' for abundance data"
+    TopN: 100
+
+Params_r_project:
+  01_Taxa_visualize:
+    TopN: 10
+  03_Fun_visualize:
+    TopN: 10
+  03_mclink_sample:
+    min_sample_num_per_KO: 1
+    preva: 0
+    abund: 0
+    completeness_threshold: 0.5 # 0-1
+    plus_scale_method: "mean" # 'mean', 'max', or 'min'
+    comma_scale_method: "sum" # e.g., 'max' for presence/absence data, or 'sum' for abundance data"
+  05_merge_tax_KO_depth:
+    preva: 0.10
+    abund: 0.0 # TPM/GPM sum of a sample is 1e6
+  05_merge_tax_Module_RelativeAbundance:
+    preva: 0.10
+    abund: 0.0 # TPM/GPM sum of a sample is 1e6
+  05_merge_tax_Module_SumCoverage:
+    preva: 0.10
+    abund: 0.0 # TPM/GPM sum of a sample is 1e6
+  06_mclink_taxon:
+    min_KO_num_in_one_taxon: 100
+    min_mean_KO_RA_in_one_taxon: 0
+    completeness_threshold: 0.5 # 0-1
+    plus_scale_method: "mean" # 'mean', 'max', or 'min'
+    comma_scale_method: "sum" # e.g., 'max' for presence/absence data, or 'sum' for abundance data"
+    TopN: 100

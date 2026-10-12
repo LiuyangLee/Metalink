@@ -1,0 +1,8 @@
+name: metalink-vibrant-1.2.1
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - vibrant =1.2.1
+  # VIBRANT databases are downloaded automatically on first use or can be
+  # pre-fetched with download-db.sh.

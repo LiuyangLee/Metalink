@@ -1,0 +1,9 @@
+name: metalink-iphop-1.4.1
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - iphop =1.4.1
+  # The "Jun_2025_pub_rw" suffix in the environment name refers to the iPHoP
+  # host database version used by MetaLink. Install the matching iPHoP database
+  # separately (see Database setup).

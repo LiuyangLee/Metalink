@@ -1,0 +1,82 @@
+Params_b_sample:
+  00_raw_stats:
+    threads: 4
+  01_trim:
+    threads: 16
+    length_required: 15
+    n_base_limit: 5
+    compression: 4
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra fastp or fastplong raw reads trimming
+  01_trim_stats:
+    threads: 16
+  02_assembly:
+    threads: 40
+    method: "megahit"
+    # method: "spades"
+    # method: "metaflye"
+  02_megahit:
+    presets: meta-sensitive        # meta-sensitive / meta-large
+    # min_count: 2                # DIY k-mer
+    # k_min: 21
+    # k_max: 141
+    # k_step: 12
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra MEGAHIT assembly
+  02_spades:
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra SPAdes assembly, e.g., --rna for RNA-Seq data
+  02_metaflye:
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra Flye assembly
+  03_mapping:
+    threads: 20
+    method: "minibwa"
+    # method: "bwamem2"
+    # method: "bwamem"
+    # method: "strobealign"
+    samtools_sort_mem: 768M
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra mapping aligner (bwa/bwa-mem2/minibwa/strobealign)
+  05_metawrap_binning_depth:
+    threads: 8
+    min_read_percent_identity: 97
+    contig_end_exclusion: 75
+    min_contig_length: 1500
+    binning_tools: "metabat2,maxbin2,concoct"
+    max_memory_gb: 512
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra metaWRAP binning
+  06_metawrap_bin_refinement:
+    max_memory_gb: 512
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra metaWRAP bin_refinement
+  06_bin_checkm:
+    threads: 8
+    min_completeness: 50
+    max_contamination: 10
+    # bins must additionally pass a quality score filter: QS = completeness - 5*contamination >= min_quality_score
+    min_quality_score: 50
+  07_contigs_depth:
+    threads: 8
+    min_read_percent_identity: 95
+    contig_end_exclusion: 75
+    min_contig_length: 300
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra prodigal for contigs
+  08_bin_prodigal:
+    threads: 8
+    extra_args: ""
+    # extra_args: "--custom-flag"   # user-supplied extra prodigal for MAGs
+
+Params_b_project:
+  01_cat_raw_stats:
+    threads: 4
+  02_cat_trimmed_stats:
+    threads: 4
+  03_contigs_stats:
+    threads: 4
+  04_merge_reads_contigs_stats:
+    threads: 4
+  05_gather_project_bin_checkm_stats:
+    threads: 4

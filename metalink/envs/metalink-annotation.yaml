@@ -1,0 +1,15 @@
+name: metalink-annotation-0.3
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # MAG taxonomy and quality
+  - drep =3.5.0
+  - checkv =1.0.3
+  # Contig/MAG taxonomy (CAT_pack)
+  - cat =6.0.1
+  # Function annotation
+  - eggnog-mapper =2.1.12
+  # Shared utilities used by annotation rules
+  - pigz =2.8
+  - python=3.9

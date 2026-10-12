@@ -1,0 +1,8 @@
+name: metalink-gtdbtk-2.4.1
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - gtdbtk =2.4.1
+  - python =3.11
+  - numpy =1.26.4

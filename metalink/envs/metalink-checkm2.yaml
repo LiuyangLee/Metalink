@@ -1,0 +1,7 @@
+name: metalink-checkm2-1.1.0
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # MAG quality
+  - checkm2 =1.1.0
