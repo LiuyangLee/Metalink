@@ -355,7 +355,7 @@ metalink r -i sample.tsv -d db_dir -w out_dir --reads-taxonomy-kraken2-confidenc
 ```
 
 > [!NOTE]
-> Default values differ by mode (`--reads-taxonomy-kraken2-confidence`: 0.6; `--contigs-taxonomy-kraken2-confidence` and `--*cr-taxonomy-kraken2-confidence` thresholds: 0.7). For higher-complexity samples (or simplified database), a lower threshold is usually recommended to retain sensitivity. See [FAQ: How do I choose the kraken2 confidence threshold for taxonomic classification?](README.md#q-how-do-i-choose-the-kraken2-confidence-threshold-for-taxonomic-classification) and Wright et al. (2023) for detailed guidance.
+> Default values differ by mode (`--reads-taxonomy-kraken2-confidence`: 0.6; `--contigs-taxonomy-kraken2-confidence` and `--*cr-taxonomy-kraken2-confidence` thresholds: 0.7). For higher-complexity samples (or simplified database), a lower threshold is usually recommended to retain sensitivity. See [FAQ: How do I choose the kraken2 confidence threshold for taxonomic classification?](README_DETAIL.md#q-how-do-i-choose-the-kraken2-confidence-threshold-for-taxonomic-classification) and Wright et al. (2023) for detailed guidance.
 
 **Option 4: Run with project-level analysis**
 
@@ -671,7 +671,7 @@ Snakemake tracks completion via output file timestamps. If a job was interrupted
 
 | Resource | Link |
 |----------|------|
-| **Full Documentation** | [README.md](README.md) |
+| **Full Documentation** | [README_DETAIL.md](README_DETAIL.md) |
 | **Snakemake Docs** | [https://snakemake.readthedocs.io](https://snakemake.readthedocs.io) |
 
 ---
@@ -682,7 +682,7 @@ If you use Metalink in your research, please cite:
 
 > Li et al. (202X). Metalink: Joint taxonomic and functional profiling of metagenomes and metatranscriptomes across resolution scales. *(under review)*.
 
-Additionally, please cite the underlying tools and databases used in your analysis. See [README.md](README.md) for the complete list of software references.
+Additionally, please cite the underlying tools and databases used in your analysis. See [README_DETAIL.md](README_DETAIL.md) for the complete list of software references.
 
 ## License
 
