@@ -1,7 +1,8 @@
 # Metalink
 
 [![PyPI version](https://img.shields.io/pypi/v/metalink.svg)](https://pypi.org/project/metalink/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/metalink.svg)](https://pypistats.org/packages/metalink)
+[![Total downloads](https://static.pepy.tech/badge/metalink)](https://pepy.tech/project/metalink)
+[![PyPI downloads/month](https://img.shields.io/pypi/dm/metalink.svg)](https://pypistats.org/packages/metalink)
 [![Python versions](https://img.shields.io/pypi/pyversions/metalink.svg)](https://pypi.org/project/metalink/)
 [![License](https://img.shields.io/pypi/l/metalink.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/LiuyangLee/Metalink?style=social)](https://github.com/LiuyangLee/Metalink)
