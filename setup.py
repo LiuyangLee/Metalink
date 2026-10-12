@@ -12,7 +12,7 @@ setup(
     name='metalink',
     version='0.3.7',
     url='https://github.com/LiuyangLee/Metalink',
-    license='GPL-3',
+    license='GPL-3.0-only',
     author='Liuyang Li',
     author_email='cyanobacteria@yeah.net',
     description=('Metalink: Joint taxonomic and functional profiling of metagenomes and metatranscriptomes across resolution scales. Metalink can be run in different modes to obtain joint outputs of functional and taxonomic profiles at multiple levels'),
