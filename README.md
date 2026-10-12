@@ -1,6 +1,10 @@
 # Metalink
 
-[![License](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/metalink.svg)](https://pypi.org/project/metalink/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/metalink.svg)](https://pypistats.org/packages/metalink)
+[![Python versions](https://img.shields.io/pypi/pyversions/metalink.svg)](https://pypi.org/project/metalink/)
+[![License](https://img.shields.io/pypi/l/metalink.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/LiuyangLee/Metalink?style=social)](https://github.com/LiuyangLee/Metalink)
 
 > **Metalink**: Joint taxonomic and functional profiling of metagenomes and metatranscriptomes across resolution scales.
 
