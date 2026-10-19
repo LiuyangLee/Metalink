@@ -152,6 +152,20 @@ log_msg <- function(...) {
 # 4. READ COMPLETENESS TABLE (shared by all abundance tracks)
 # ============================================================================
 
+# Missing input tables are a valid empty result, not an error: the upstream
+# mclink step is skipped when there is nothing computable, in which case no
+# mc_abundance/mc_completeness tables are produced. Exit gracefully so the
+# workflow continues; downstream steps skip missing filtered tables.
+missing_files <- c()
+if (!file.exists(completeness_file)) missing_files <- c(missing_files, completeness_file)
+if (!is.na(abundance_RA_file) && !file.exists(abundance_RA_file)) missing_files <- c(missing_files, abundance_RA_file)
+if (!is.na(abundance_SC_file) && !file.exists(abundance_SC_file)) missing_files <- c(missing_files, abundance_SC_file)
+if (length(missing_files) > 0) {
+  log_msg("NOTE: input table(s) not found: %s", paste(missing_files, collapse = ", "))
+  log_msg("Upstream mclink was skipped (nothing computable in this input); nothing to filter, exiting gracefully.")
+  quit(save = "no", status = 0)
+}
+
 log_msg("Loading completeness table: %s", completeness_file)
 dt_comp  <- fread(completeness_file, sep = "\t", header = has_header, stringsAsFactors = FALSE)
 

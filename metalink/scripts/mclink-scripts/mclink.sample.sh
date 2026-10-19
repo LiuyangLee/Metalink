@@ -162,7 +162,7 @@ fi
 if [ ! -d ${output_Heatmap_by_pathway_presence} ]; then mkdir -p ${output_Heatmap_by_pathway_presence};
 else
     echo "Warning: ${output_Heatmap_by_pathway_presence} already exists."
-		rm -r ${output_Heatmap_by_pathway_presence}/*.pdf
+		rm -rf ${output_Heatmap_by_pathway_presence}/*.pdf ${output_Heatmap_by_pathway_presence}/*.html
 fi
 
 ########################################################################################################
@@ -189,13 +189,13 @@ fi
 #if [ ! -d ${output_Heatmap_by_pathway_log_transformed} ]; then mkdir -p ${output_Heatmap_by_pathway_log_transformed};
 #else
 #    echo "Warning: ${output_Heatmap_by_pathway_log_transformed} already exists."
-#		rm -r ${output_Heatmap_by_pathway_log_transformed}/*.pdf
+#		rm -rf ${output_Heatmap_by_pathway_log_transformed}/*.pdf ${output_Heatmap_by_pathway_log_transformed}/*.html
 #fi
 
 if [ ! -d ${output_Heatmap_by_pathway_log_transformed_filtered} ]; then mkdir -p ${output_Heatmap_by_pathway_log_transformed_filtered};
 else
     echo "Warning: ${output_Heatmap_by_pathway_log_transformed_filtered} already exists."
-		rm -r ${output_Heatmap_by_pathway_log_transformed_filtered}/*.pdf
+		rm -rf ${output_Heatmap_by_pathway_log_transformed_filtered}/*.pdf ${output_Heatmap_by_pathway_log_transformed_filtered}/*.html
 fi
 ########################################################################################################
 ########################                       MKDIR 3 !                        ########################
@@ -221,13 +221,13 @@ fi
 #if [ ! -d ${output_Heatmap_by_pathway_avg_transformed} ]; then mkdir -p ${output_Heatmap_by_pathway_avg_transformed};
 #else
 #    echo "Warning: ${output_Heatmap_by_pathway_avg_transformed} already exists."
-#		rm -r ${output_Heatmap_by_pathway_avg_transformed}/*.pdf
+#		rm -rf ${output_Heatmap_by_pathway_avg_transformed}/*.pdf ${output_Heatmap_by_pathway_avg_transformed}/*.html
 #fi
 
 if [ ! -d ${output_Heatmap_by_pathway_avg_transformed_filtered} ]; then mkdir -p ${output_Heatmap_by_pathway_avg_transformed_filtered};
 else
     echo "Warning: ${output_Heatmap_by_pathway_avg_transformed_filtered} already exists."
-		rm -r ${output_Heatmap_by_pathway_avg_transformed_filtered}/*.pdf
+		rm -rf ${output_Heatmap_by_pathway_avg_transformed_filtered}/*.pdf ${output_Heatmap_by_pathway_avg_transformed_filtered}/*.html
 fi
 
 ########################################################################################################
@@ -253,7 +253,7 @@ if [ ! -z ${SumCoverage_input_file} ]; then
 	if [ ! -d ${output_Heatmap_by_pathway_log_transformed_filtered_SumCoverage} ]; then mkdir -p ${output_Heatmap_by_pathway_log_transformed_filtered_SumCoverage};
 	else
 	    echo "Warning: ${output_Heatmap_by_pathway_log_transformed_filtered_SumCoverage} already exists."
-			rm -r ${output_Heatmap_by_pathway_log_transformed_filtered_SumCoverage}/*.pdf
+			rm -rf ${output_Heatmap_by_pathway_log_transformed_filtered_SumCoverage}/*.pdf ${output_Heatmap_by_pathway_log_transformed_filtered_SumCoverage}/*.html
 	fi
 
 	if [ ! -d ${output_KO_Sample_by_pathway_avg_transformed_filtered_SumCoverage} ]; then mkdir -p ${output_KO_Sample_by_pathway_avg_transformed_filtered_SumCoverage};
@@ -265,7 +265,7 @@ if [ ! -z ${SumCoverage_input_file} ]; then
 	if [ ! -d ${output_Heatmap_by_pathway_avg_transformed_filtered_SumCoverage} ]; then mkdir -p ${output_Heatmap_by_pathway_avg_transformed_filtered_SumCoverage};
 	else
 	    echo "Warning: ${output_Heatmap_by_pathway_avg_transformed_filtered_SumCoverage} already exists."
-			rm -r ${output_Heatmap_by_pathway_avg_transformed_filtered_SumCoverage}/*.pdf
+			rm -rf ${output_Heatmap_by_pathway_avg_transformed_filtered_SumCoverage}/*.pdf ${output_Heatmap_by_pathway_avg_transformed_filtered_SumCoverage}/*.html
 	fi
 
 fi
@@ -313,7 +313,8 @@ if [ -s ${output_DIR}/SumCoverage/mc_abundance.tsv ]; then
 	sumcov_filtered_arg="--abundance_SumCoverage ${output_DIR}/SumCoverage/mc_abundance.tsv --output_SumCoverage ${output_DIR}/SumCoverage/mc_abundance_filtered_by_completeness.tsv"
 fi
 
-Rscript ${script_DIR}/mclink_abundance_filtered_by_completeness.cmd.R \
+if [ -s ${output_DIR}/RelativeAbundance/mc_abundance.tsv ] && [ -s ${output_DIR}/Completeness/mc_completeness.tsv ]; then
+	Rscript ${script_DIR}/mclink_abundance_filtered_by_completeness.cmd.R \
 		--abundance_RelativeAbundance ${output_DIR}/RelativeAbundance/mc_abundance.tsv \
 		--completeness ${output_DIR}/Completeness/mc_completeness.tsv \
 		--output_RelativeAbundance ${output_DIR}/RelativeAbundance/mc_abundance_filtered_by_completeness.tsv \
@@ -321,6 +322,9 @@ Rscript ${script_DIR}/mclink_abundance_filtered_by_completeness.cmd.R \
 		--strategy zero \
 		--meta-cols "Module_Entry,Level_2,Level_3,Module_Name,Definition" \
 		${sumcov_filtered_arg}
+else
+	echo "SKIP abundance filtering by completeness: RelativeAbundance/mc_abundance.tsv or Completeness/mc_completeness.tsv is missing/empty (mclink was skipped upstream, see the 'nothing to compute' message above). Check whether any sequences were functionally classified for this input."
+fi
 
 num_samples=$(head -1 ${RelativeAbundance_input_file} | awk -F'\t' '{print NF-1}')
 echo "Detected ${num_samples} sample(s) in input."

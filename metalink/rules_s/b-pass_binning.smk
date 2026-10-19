@@ -48,6 +48,7 @@ rule b_sample_06_bin_checkm:
         r"""
         if [ -d "{input.in_path}" ] && [ -n "$(find -L {input.in_path} -maxdepth 1 -type f \( -name '*.fasta' -o -name '*.fa' -o -name '*.fna' \) -print -quit)" ]; then
             echo "Found bins in {input.in_path}, running checkm..." > {log}
+            rm -rf {params.out_path} 2>> {log}
             mkdir -p {params.out_path} 2>> {log}
             checkm lineage_wf -x {params.genometype} {input.in_path} {params.out_path} -t {threads} --pplacer_threads {threads} >> {log} 2>&1
             checkm qa --tab_table {params.out_path}/lineage.ms {params.out_path} -f {params.stats} -t {threads} -o 2 >> {log} 2>&1

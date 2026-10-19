@@ -38,7 +38,12 @@ verbose <- opt$verbose
 count = 1
 user_file <- dir(user_Sample_in_DIR)
 if (length(user_file) == 0) {
-  stop(paste0("ERROR: no files found in user_Sample_in_DIR: ", user_Sample_in_DIR))
+  stop(paste0(
+    "ERROR: no per-sample MAG abundance tables found in ", user_Sample_in_DIR, "\n",
+    "This means every sample's MAG coverm table was missing or empty, i.e. no MAG had any mapped reads in any sample.\n",
+    "Check upstream: (1) did any MAG pass the project quality gate (see 02_quality_gate), and ",
+    "(2) did reads actually map to the MAG reference (see 03_mapping / 03_coverm_MAGs logs)?"
+  ))
 }
 for (file in user_file) {
   print(file)

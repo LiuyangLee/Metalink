@@ -57,7 +57,23 @@ extract_sample_id <- function(file_path) {
 # Read list of input files
 # ------------------------------------------------------------------------------
 files <- readLines(args$sample_tsv_list, encoding = "UTF-8")
-if (length(files) == 0) stop("ERROR: sample list file is empty.")
+if (length(files) == 0) {
+  # Not an error: every per-sample input was missing/empty upstream (e.g.
+  # nothing classified, or no taxon had enough KOs). Write header-only
+  # outputs so the workflow continues; downstream steps skip empty tables.
+  id_vars_e <- unlist(strsplit(args$id_var, ","))
+  value_vars_e <- unlist(strsplit(args$value_var, ","))
+  cat("NOTE: sample list file is empty - no non-empty per-sample tables were\n")
+  cat("available (all samples were skipped upstream, e.g. nothing classified or\n")
+  cat("no taxon had enough KOs). Writing empty outputs; downstream steps skip them.\n")
+  dir.create(dirname(args$out_long), showWarnings = FALSE, recursive = TRUE)
+  writeLines(paste(c(id_vars_e, value_vars_e), collapse = "\t"), args$out_long)
+  for (val in value_vars_e) {
+    writeLines(id_vars_e[1], sub("\\.wide\\.tsv$", sprintf(".%s.mean.wide.tsv", val), args$out_wide))
+    writeLines(id_vars_e[1], sub("\\.wide\\.tsv$", sprintf(".%s.per_sample.filter.wide.tsv", val), args$out_wide))
+  }
+  quit(save = "no", status = 0)
+}
 
 # ------------------------------------------------------------------------------
 # Parse columns
@@ -156,8 +172,19 @@ dt_long <- rbindlist(
   use.names = TRUE, fill = TRUE
 )
 
-if (nrow(dt_long) == 0)
-  stop("ERROR: No data after processing all samples.")
+if (nrow(dt_long) == 0) {
+  # All per-sample tables were read but contained no usable (non-zero) values:
+  # a valid empty result, not an error. Write header-only outputs and exit.
+  cat("NOTE: no usable (non-zero) values in any per-sample table; writing\n")
+  cat("empty outputs so the workflow continues; downstream steps skip them.\n")
+  dir.create(dirname(args$out_long), showWarnings = FALSE, recursive = TRUE)
+  writeLines(paste(c(id_vars, value_vars), collapse = "\t"), args$out_long)
+  for (val in value_vars) {
+    writeLines(row_var, sub("\\.wide\\.tsv$", sprintf(".%s.mean.wide.tsv", val), args$out_wide))
+    writeLines(row_var, sub("\\.wide\\.tsv$", sprintf(".%s.per_sample.filter.wide.tsv", val), args$out_wide))
+  }
+  quit(save = "no", status = 0)
+}
 
 # Validate columns
 missing_id <- setdiff(id_vars, names(dt_long))

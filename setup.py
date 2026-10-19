@@ -10,7 +10,7 @@ with open(os.path.join(this_directory, 'README_DETAIL.md')) as f:
 
 setup(
     name='metalink',
-    version='0.3.7',
+    version='0.3.8',
     url='https://github.com/LiuyangLee/Metalink',
     license='GPL-3.0-only',
     author='Liuyang Li',

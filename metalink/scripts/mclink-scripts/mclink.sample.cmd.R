@@ -140,6 +140,15 @@ para_split_by_pathway = split_by_pathway
 df_start <- para_KO_Sample_wide
 rownames(df_start) <- df_start[[1]]
 ko_col <- df_start[[1]]
+# Drop non-KO pseudo-rows such as 'Unclassified' (present when kraken2
+# classified nothing functionally); they are not valid KOs and crash mclink.
+valid_ko <- grepl("^K\\d{5}$", df_start[[1]])
+if (any(!valid_ko)) {
+  cat(sprintf("[%s] WARNING: dropping %d non-KO row(s) from the input table (e.g. 'Unclassified'); they are not valid KO identifiers\n",
+              format(Sys.time(), "%Y-%m-%d %H:%M:%S"), sum(!valid_ko)))
+  df_start <- df_start[valid_ko, , drop = FALSE]
+  ko_col <- df_start[[1]]
+}
 n_na <- sum(is.na(as.matrix(df_start[, -1, drop = FALSE])))
 if (n_na > 0) {
   cat(sprintf("[%s] WARNING: input table contains %d NA value(s); replaced with 0, please check the upstream data\n",
@@ -158,6 +167,31 @@ rownames(df_final) <- NULL
 cat(sprintf("[%s] After filtering: %d KO (rows) with %d samples (columns)\n",
             format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
             nrow(df_final), ncol(df_final) - 1))
+
+# no KO/sample survived the filters: a valid empty result, not an error.
+# Exit gracefully so the workflow completes without module-completeness
+# outputs for this input.
+# mclink can only use KOs present in the KEGG module reference; if none of
+# the surviving KOs belong to any known module (e.g. inputs dominated by
+# viral machinery KOs), there is nothing to compute -- skip gracefully.
+if (nrow(df_final) > 0 && ncol(df_final) >= 2) {
+  ref_kos <- unique(as.character(para_KO_pathway_ref[[1]]))
+  n_overlap <- sum(df_final$KO %in% ref_kos)
+  if (n_overlap == 0) {
+    cat(sprintf("[%s] None of the %d KO(s) in this input belong to any known KEGG module; module completeness cannot be computed, skip mclink.\n",
+                format(Sys.time(), "%Y-%m-%d %H:%M:%S"), nrow(df_final)))
+    cat(sprintf("[%s] This typically means the sample has no organisms with metabolic-module genes (e.g. only viruses were found, whose KOs are mostly not in metabolic modules).\n",
+                format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+    quit(save = "no", status = 0)
+  }
+}
+if (nrow(df_final) == 0 || ncol(df_final) < 2) {
+  cat(sprintf("[%s] 0 KOs or 0 samples after filtering; nothing to compute, skip mclink.\n",
+              format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+  cat(sprintf("[%s] This means no taxon/sample in this input has enough KO annotations for module completeness analysis (e.g., in viral modes such as pmr --mags v, it usually means no virus carried enough KOs).\n",
+              format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+  quit(save = "no", status = 0)
+}
 
 # abundance results go to the RelativeAbundance subdirectory; completeness results go to the Completeness subdirectory (shared, computed only once)
 if (para_table_feature == "abundance") {
@@ -223,5 +257,10 @@ if (para_table_feature == "abundance" && !is.null(in_KO_Sample_wide_SumCoverage)
   mclink_args_cov <- mclink_args
   mclink_args_cov$data <- df_cov_final
   mclink_args_cov$out_dir <- para_out_dir_cov
-  mc_list_cov = do.call(mclink::mclink, mclink_args_cov)
+  if (nrow(df_cov_final) == 0 || ncol(df_cov_final) < 2) {
+    cat(sprintf("[%s] SumCoverage matrix empty after filtering; skip SumCoverage mclink run.\n",
+                format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+  } else {
+    mc_list_cov = do.call(mclink::mclink, mclink_args_cov)
+  }
 }

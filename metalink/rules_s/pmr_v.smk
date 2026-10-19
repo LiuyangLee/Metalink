@@ -102,6 +102,9 @@ def pmr_v_gated_input(wildcards, artifact):
 rule pmr_v_project_02_quality_gate:
     input:
         v_tax = lambda wildcards: pmr_v_summary_input(wildcards),
+        # declare the project vclust output so the gate cannot read the
+        # clusters_fna directory before v_project_01_vclust has filled it
+        vclust_fna = path + 'results/v-project/06_vclust/{project}/vMAGs_vclust.fna',
     output:
         v_filter = path + 'results/pmr_v-project/02_quality_gate/{project}.vMAG_summary_info.filter.tsv',
         mk = path + 'markers/pmr_v-project/02_quality_gate/{project}.mk',
@@ -152,6 +155,11 @@ rule pmr_v_project_02_quality_gate:
         else
             echo "[INFO] gated vMAG set unchanged; keep existing {params.genome_list}, {params.gated_dir} and {params.gated_fna}" >> {log}
             rm -f {params.genome_list}.tmp
+        fi
+        n_vMAG=$(wc -l < {params.genome_list})
+        echo "[INFO] project {wildcards.project}: $n_vMAG vMAG(s) passed the quality gate." | tee -a {log} >&2
+        if [ "$n_vMAG" -eq 0 ]; then
+            echo "[WARNING] project {wildcards.project}: no vMAGs passed the quality gate; downstream reference/mapping will be empty." | tee -a {log} >&2
         fi
         touch {output.mk}
         """

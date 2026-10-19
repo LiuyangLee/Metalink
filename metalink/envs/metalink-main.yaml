@@ -54,3 +54,4 @@ dependencies:
   # Shared utilities
   - seqkit =2.8.2
   - pigz =2.8
+  - aria2

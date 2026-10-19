@@ -225,7 +225,7 @@ with open(in_f,newline='')as fin,open(out_f,'w',newline='')as fout:
                 vclust prefilter -t {threads} -i {output.Project_Nlinked_viral_gn} -o {output.fltr_txt} {params.prefilter_extra_args} > {log} 2>&1
                 seq_name=$(grep '^>' {output.Project_Nlinked_viral_gn} | sed 's/^>//' | awk '{{print $1}}')
                 printf "object\\tcluster\\n%s\\t%s\\n" "$seq_name" "$seq_name" > {output.clusters_tsv}
-                printf "$seq_name" > {output.unique_clusters}
+                printf "%s\n" "$seq_name" > {output.unique_clusters}
                 touch {output.ani_tsv} {output.ani_ids_tsv} {output.ani_ids_scale_tsv}
                 while IFS= read -r c; do
                     hits=$(find {params.bin_folder} -type f -name "${{c}}.fna" 2>> {log})

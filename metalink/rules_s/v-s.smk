@@ -696,8 +696,12 @@ with open(in_f,newline='')as fin,open(out_f,'w',newline='')as fout:
                 vclust prefilter -t {threads} -i {params.Nlinked_viral_gn} -o {output.fltr_txt} {params.prefilter_extra_args} > {log} 2>&1
                 seq_name=$(grep '^>' {params.Nlinked_viral_gn} | sed 's/^>//' | awk '{{print $1}}')
                 printf "object\\tcluster\\n%s\\t%s\\n" "$seq_name" "$seq_name" > {output.clusters_tsv}
-                printf "$seq_name" > {output.unique_clusters}
+                printf "%s\n" "$seq_name" > {output.unique_clusters}
                 touch {output.ani_tsv} {output.ani_ids_tsv} {output.ani_ids_scale_tsv}
+                # a singleton still IS a cluster: copy its genome fna into
+                # vMAGs_folder so project-level quality-gate/mapping can find it
+                mkdir -p {params.vMAGs_folder} 2>> {log}
+                awk '{{print $0".fna"}}' {output.unique_clusters}                     | xargs -r -I{{}} find {params.bin_folder} -type f -name {{}} -print0                     | xargs -0 -r cp -t {params.vMAGs_folder} 2>> {log}
             fi
         else
             echo "Empty viral scaffold for {wildcards.sample}; skip vclust." > {log} 2>&1

@@ -36,3 +36,9 @@ Databases:
 
 Kraken2_taxonomy_db_size: kraken2_raw
 Kraken2_function_db_size: kraken2_raw
+
+# Delete the downloaded .tar.gz archives (and their .md5 files) from
+# DBDIR/downloads/ after successful extraction. Default false: archives are
+# kept so databases can be re-extracted or copied to another machine without
+# re-downloading; delete them manually to save disk space.
+Delete_archives: false

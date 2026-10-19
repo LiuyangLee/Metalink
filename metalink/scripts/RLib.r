@@ -41,6 +41,14 @@ gtdb_tax = function(Ref_metadata){
 
 
 rename_GTDB_taxonomy_dataframe = function(data) {
+  # 0-row input (e.g. a vMAG/mMAG absent from this sample's coverm output):
+  # nothing to rename. Keep the expected schema (NewTax column) so downstream
+  # select()/mutate() calls still work; case_when() on empty columns would
+  # otherwise fail with a character/logical type conflict.
+  if (nrow(data) == 0) {
+    if (!"NewTax" %in% colnames(data)) data$NewTax <- character(0)
+    return(data)
+  }
   data[is.na(data)] <- ""
   prescale_data = data %>%
     mutate(., Species = (ifelse((is.na(.$Species)| (grepl("^s__.*unclassified", .$Species)& !grepl("s__root species", .$Species))  |.$Species == "no support" | .$Species == "" ), "s__",.$Species))) %>%

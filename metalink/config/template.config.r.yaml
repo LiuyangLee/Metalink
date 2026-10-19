@@ -36,6 +36,8 @@ Params_r_sample:
     threads: 10
   03_taxonomy:
     threads: 60
+    bracken_level: S
+    bracken_threshold: 0
   03_taxonomy_kraken2:
     confidence: 0.6
     extra_args: ""

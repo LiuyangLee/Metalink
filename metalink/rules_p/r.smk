@@ -228,6 +228,8 @@ rule r_sample_03_taxonomy_bracken:
     threads: config["Params_r_sample"]["03_taxonomy"]["threads"]
     params:
         databases_path = config["Directory"]["database"]["kraken2_taxonomy_db"],
+        bracken_level = config["Params_r_sample"]["03_taxonomy"]["bracken_level"],
+        bracken_threshold = config["Params_r_sample"]["03_taxonomy"]["bracken_threshold"],
     conda: config["conda_envs"]["metalink-main"]
     log:
         path + 'logs/r-sample/03_taxonomy/bracken/{sample}.log'
@@ -235,6 +237,12 @@ rule r_sample_03_taxonomy_bracken:
         path + 'benchmarks/r-sample/03_taxonomy/bracken/{sample}.benchmark'
     shell:
         """
+        n_lvl=$(awk -F'\t' '$4=="{params.bracken_level}" && $2+0>={params.bracken_threshold} {{n++}} END {{print n+0}}' {input.kraken_report})
+        if [ "$n_lvl" -eq 0 ]; then
+            echo "[Bracken skip] Sample {wildcards.sample}: the kraken2 report has no reads classified at level {params.bracken_level}, so bracken -l {params.bracken_level} cannot estimate abundances; producing empty Bracken outputs." > {log}
+            echo "[Bracken skip] This usually means the sample has no classifiable content at this level, or a reduced kraken2 database / high confidence threshold was used (consider lowering --reads-taxonomy-kraken2-confidence)." >> {log}
+            touch {output.bracken_report} {output.bracken_kraken}
+        else
         Length=`seqkit head -n 1000 {input.r1} \
           |seqkit fx2tab -l | cut -f 2 | awk '{{ if (length > max) max = length }} END {{ print max }}'` 2> {log}
 
@@ -252,13 +260,17 @@ rule r_sample_03_taxonomy_bracken:
         }}
         ScaledLength=$(process_number $Length) 2>> {log}
 
+        # reads classified below the target level (e.g. S/S1/S2 under G) are
+        # mapped up and included
         bracken \
             -r ${{ScaledLength}} \
             -d {params.databases_path} \
-            -t {threads} \
+            -l {params.bracken_level} \
+            -t {params.bracken_threshold} \
             -i {input.kraken_report} \
             -w {output.bracken_kraken} \
             -o {output.bracken_report} >> {log} 2>&1
+        fi
         """
 
 rule r_sample_04_function_kraken2:

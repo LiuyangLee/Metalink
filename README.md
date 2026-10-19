@@ -11,11 +11,14 @@
 
 📘 **This page is a quick introduction. For installation, configuration, and full usage instructions, see the [Detailed Documentation](README_DETAIL.md).**
 
-Metalink is a scalable, end-to-end metagenomic/metatranscriptomic analysis workflow built on [Snakemake](https://snakemake.github.io). It overcomes the fundamental limitation that existing tools profile taxonomy and function independently, and typically operate on only one analytical level (reads, contigs, or MAGs). Metalink couples taxonomic and functional profiling into joint outputs through three core innovations:
+Metalink implements an integrated strategy that functionally and taxonomically profiles metagenomic and metatranscriptomic sequencing. The key features include:
 
 1. **LCFH (Last Common Function-based functional Hierarchy)**: Reorganizes ~424 million KO annotations into a seven-level tree-structured functional classification, enabling k-mer-based classifiers (e.g., kraken2) to perform functional assignment with LCA-like resolution.
 2. **Unified Taxonomic Framework**: Integrates GTDB (prokaryotes), ICTV (viruses), and NCBI (microeukaryotes) into a single, version-traceable taxonomy, ensuring consistent classification across reads, contigs, and MAGs.
-3. **Multi-Level Integration**: Combines MAG, contig, and read-level analyses with overlap-based deduplication, balancing the accuracy of assembly-based methods with the completeness of read-level profiling.
+3. **Multi-Level Integration**: Combines MAG, contig, and read-level analyses with overlap-based deduplication, balancing the accuracy of assembly-based methods with the completeness of read-level profiling. Fully integrated modes (e.g. `vmcr`) jointly profile reads, contigs, mMAGs and vMAGs, while per-level modes (`r`, `c`, `m`) allow direct comparison of the same sample across resolution levels.
+4. **Joint Taxonomic–Functional Output**: Per-sequence co-annotation directly answers which species contribute to which functions, moving analysis beyond cataloging species and functions toward mechanistic inference of species–function–environment triadic associations.
+5. **Comprehensive & Scalable Workflow**: 14 analysis modes (b to vmcr) covering assembly, binning, taxonomy, function, and metabolic pathway completeness. Supports 2nd-generation short reads (single-end / paired-end), 3rd-generation long reads (PacBio / Nanopore), and metatranscriptomes (read and assembly-level profiling). Built on Snakemake with robust dependency tracking, dry-run (`-n`), resume (`--ri`/`--rerun-incomplete`), and cluster execution.
+
 
 <p align="center">
   <img src="Fig.1.png" alt="Metalink overview" width="70%">
@@ -29,7 +32,6 @@ Metalink is a scalable, end-to-end metagenomic/metatranscriptomic analysis workf
 
 ## Table of contents
 
-- [Features](#features)
 - [Installation & Setup](#installation--setup)
   - [Metalink CLI Installation](#metalink-cli-installation)
     - [PyPI (recommended for quick start)](#option-1-pypi-recommended-for-quick-start)
@@ -41,7 +43,6 @@ Metalink is a scalable, end-to-end metagenomic/metatranscriptomic analysis workf
     - [Full setup (all analysis modes)](#full-setup-all-analysis-modes)
   - [Database setup](#database-setup)
     - [Quick setup](#quick-setup)
-    - [Database directory structure](#database-directory-structure)
 - [Quick start](#quick-start)
   - [Prepare input](#prepare-input)
   - [Run analysis](#run-analysis)
@@ -62,14 +63,6 @@ Metalink is a scalable, end-to-end metagenomic/metatranscriptomic analysis workf
 
 ---
 
-## Features
-
-1. **Comprehensive & Scalable Workflow**:  14 analysis modes (b to vmcr) covering assembly, binning, taxonomy, function, and metabolic pathway completeness. Supports 2nd-generation short reads (single-end / paired-end), 3rd-generation long reads (PacBio / Nanopore), and metatranscriptomes (read and assembly-level profiling). Built on Snakemake with robust dependency tracking, dry-run (`-n`), resume (`--ri`/`--rerun-incomplete`), and cluster execution.
-2. **Accurate Taxonomic & Functional Profiling**: Fast k-mer-based classification (kraken2) with a unified taxonomy integrating GTDB (prokaryotes), ICTV (viruses), and NCBI (microeukaryotes). The LCFH (Last Common Function-based functional Hierarchy) reorganizes ~424 million KO annotations into a seven-level tree (lv1–lv7), enabling LCA-like functional assignment.
-3. **Joint Taxonomic-Functional Output**: Per-sequence co-annotation directly answers which species contribute to which functions, transforming analysis from cataloging species and functions to mechanistic inference of species–function–environment triadic associations.
-
----
-
 ## Installation & Setup
 
 Setting up Metalink involves three steps: installing the Metalink CLI, creating the workflow tool environments, and downloading the databases.
@@ -84,8 +77,8 @@ The fastest way to get the Metalink CLI:
 
 ```bash
 # 1. Create a Python environment
-conda create -n metalink-0.3.7
-conda activate metalink-0.3.7
+conda create -n metalink-0.3.8
+conda activate metalink-0.3.8
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 2. Install Metalink from PyPI
@@ -115,8 +108,8 @@ git clone https://github.com/LiuyangLee/Metalink.git
 cd Metalink
 
 # 2. Create a Python environment for the Metalink CLI
-conda create -n metalink-0.3.7
-conda activate metalink-0.3.7
+conda create -n metalink-0.3.8
+conda activate metalink-0.3.8
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 3. Install Metalink CLI
@@ -126,8 +119,8 @@ pip install -e .
 #### Option 3: Bioconda Installation
 
 ```bash
-conda create -n metalink-0.3.7
-conda activate metalink-0.3.7
+conda create -n metalink-0.3.8
+conda activate metalink-0.3.8
 mamba install -c bioconda metalink
 ```
 
@@ -138,7 +131,7 @@ mamba install -c bioconda metalink
 #### Verify installation
 
 ```bash
-conda activate metalink-0.3.7
+conda activate metalink-0.3.8
 metalink --help
 metalink b --help
 ```
@@ -230,6 +223,9 @@ metalink download-database -d db_dir --databases kraken2_taxonomy --kraken2-taxo
 
 Available sizes: taxonomy `kraken2_16GB` / `kraken2_64GB` / `kraken2_256GB` / `kraken2_raw`; function `kraken2_16GB` / `kraken2_raw`.
 
+> [!TIP]
+> You can download the archives yourself and let Metalink verify and extract them — see [Manual download of Metalink-built databases](README_DETAIL.md#manual-download-of-metalink-built-databases).
+
 Approximate disk and memory requirements of the databases (Metalink-built: v20250930; third-party: versions as shipped by `metalink download-database`):
 
 | Database | Variant | Disk space | kraken2 RAM |
@@ -250,56 +246,6 @@ Approximate disk and memory requirements of the databases (Metalink-built: v2025
 | VirSorter2 DB | v2.2.4 | ~12 GB | — |
 | VIBRANT DB | v1.2.1 | ~8.0 GB | — |
 | iPHoP DB | Jun_2025_pub_rw | ~294 GB | — |
-
-#### Database directory structure
-
-During and after `metalink download-database`, the following directories are created under **DBDIR**:
-
-```text
-DBDIR/
-├── kraken2_taxonomy_db/          # Metalink kraken2 taxonomy DB
-│   └── v20250930/                # Build version
-│       ├── kraken2_raw/          # Default
-│       ├── kraken2_16GB/         # Optional
-│       ├── kraken2_64GB/         # Optional
-│       └── kraken2_256GB/        # Optional
-├── kraken2_function_db/          # Metalink kraken2 function DB (LCFH)
-│   └── v20250930/                # Build version
-│       ├── kraken2_raw/          # Default
-│       └── kraken2_16GB/         # Optional
-├── cat_pack_db/                  # Metalink-customized CAT DB
-│   └── v20250930/                # Build version
-│       ├── cat_pack_gtdb_ncbi_ictv/
-│       └── cat_pack_ictv/
-├── eggnog_db/                    # eggNOG-mapper data
-│   └── v5.0.2/
-│       ├── eggnog_proteins.dmnd
-│       └── mmseqs/
-├── gtdbtk_db/                    # GTDB-Tk reference data
-│   └── R226/
-├── checkm2_db/                   # CheckM2 database
-│   └── v1.1.0/
-│       └── uniref100.KO.1.dmnd
-├── checkm_db/                    # CheckM database (used by MetaWRAP binning)
-│   └── checkm_data_2015_01_16/
-├── checkv_db/                    # CheckV database
-│   └── checkv-db-v1.5/
-├── genomad_db/                   # geNomad database
-│   └── genomad_db_v1.9/
-├── virsorter2_db/                # VirSorter2 database
-│   └── v2.2.4/
-├── vibrant_db/                   # VIBRANT database
-│   └── v1.2.1/
-│       ├── databases/
-│       └── files/
-├── iphop_db/                     # iPHoP database
-│   └── Jun_2025_pub_rw/
-├── downloads/                    # Temporary download archives
-├── logs/                         # Download and setup logs
-├── markers/                      # Completion flags
-├── config/                       # config.download.yaml used for the run
-└── .metalink_db_bundle.yaml      # Installed bundle version
-```
 
 ---
 
@@ -360,7 +306,7 @@ metalink r -i sample.tsv -d db_dir -w out_dir --reads-taxonomy-kraken2-confidenc
 ```
 
 > [!NOTE]
-> Default values differ by mode (`--reads-taxonomy-kraken2-confidence`: 0.6; `--contigs-taxonomy-kraken2-confidence` and `--*cr-taxonomy-kraken2-confidence` thresholds: 0.7). For higher-complexity samples (or simplified database), a lower threshold is usually recommended to retain sensitivity. See [FAQ: How do I choose the kraken2 confidence threshold for taxonomic classification?](README_DETAIL.md#q-how-do-i-choose-the-kraken2-confidence-threshold-for-taxonomic-classification) and Wright et al. (2023) for detailed guidance.
+> Default values differ by mode (`--reads-taxonomy-kraken2-confidence`: 0.6; `--contigs-taxonomy-kraken2-confidence` and `--*cr-taxonomy-kraken2-confidence` thresholds: 0.7; function thresholds: 0.00–0.05) and apply to the full database (`kraken2_raw`); with a reduced kraken2 database (e.g. `kraken2_16GB`), generated configs default all kraken2 confidence thresholds to 0. For higher-complexity samples (or simplified database), a lower threshold is usually recommended to retain sensitivity. See [FAQ: How do I choose the kraken2 confidence thresholds for taxonomic and functional classification?](README_DETAIL.md#q-how-do-i-choose-the-kraken2-confidence-thresholds-for-taxonomic-and-functional-classification) and Wright et al. (2023) for detailed guidance.
 
 **Option 4: Run with project-level analysis**
 
@@ -374,16 +320,6 @@ metalink r -i sample.tsv -d db_dir -w out_dir --run-project -p -j 40
 | **What it does** | Processes each sample independently through the full pipeline | **Automatically runs all sample-level steps first**, then executes project-level rules that aggregate results across all samples |
 | **Extra outputs** | Per-sample results only | Additional merged tables, cross-sample statistics, project-wide dereplication (e.g., dRep), and comparative visualizations |
 | **When to use** | Only need individual sample reports | Full project analysis requiring cross-sample comparison and summary |
-
-> [!IMPORTANT]
-> `--run-project` does **not** skip or replace sample-level analysis. Snakemake will first build and execute the sample-level targets for every entry in your sample sheet, and only after those complete will it trigger the project-level aggregation rules. Think of it as "run everything, then also generate the project summary."
-
-> [!TIP]
-> **Quoting tool-specific `extra_args`**: When forwarding extra arguments to third-party tools (e.g., `--spades-extra-args`, `--metaflye-extra-args`, `--binning-metawrap-extra-args`), wrap the value in quotes even if it contains a single flag or multiple flags/values:
-> ```bash
-> --metaflye-extra-args "--iterations 2"
-> --binning-metawrap-extra-args "-m 5"
-> ```
 
 
 ### Minimal database setup (read mode only)
@@ -489,9 +425,9 @@ In this case Metalink creates a temporary config.c.runtime.*.yaml with the merge
   <em>Fig. 3 | The fully integrated vmcr workflow: reads, contigs, mMAGs and vMAGs are annotated for taxonomy and function, and linked into unified per-sample species and gene pools.</em>
 </p>
 
-**Visualize the difference with DAG graphs:**
+**Visualize the available modes with DAG graphs:**
 
-You can compare the two execution plans directly by generating rule graphs:
+You can visualize the two execution plans directly by generating rule graphs:
 
 ```bash
 # r sample-level only DAG
@@ -548,15 +484,12 @@ Metalink's built-in assembler and binner combinations cover the most common scen
 metalink mcr -i sample.tsv -d db_dir -w out_dir -j 4
 
 # Skip-level 1: Start from clean reads (skip fastp / fastplong trimming)
-# Provide clean FASTQ paths
 metalink mcr -i sample.tsv -d db_dir -w out_dir --skip-level 1 -j 4
 
 # Skip-level 2: Start from contigs + clean reads (skip MEGAHIT assembly)
-# TSV must contain a contig_file column with contig paths
 metalink mcr -i sample.tsv -d db_dir -w out_dir --skip-level 2 -j 4
 
 # Skip-level 3: Start from MAGs + contigs + clean reads (skip binning)
-# TSV must contain a mMAG_dir column with MAG directory paths
 metalink mcr -i sample.tsv -d db_dir -w out_dir --skip-level 3 -j 4
 ```
 
@@ -597,14 +530,14 @@ metalink c -i sample.tsv -d db_dir -w out_dir --read-type pacbio-hifi -j 4
 
 ### Metatranscriptomes
 
-Metalink supports metatranscriptomic analysis via the `c`, `cr`, `r`, `v`, `vc`, and `vcr` modes. **rRNA and other non-coding RNA sequences must be removed prior to input** (e.g., with [RiboDetector](https://github.com/hzi-bifo/RiboDetector)). Metalink assumes the input reads are already protein-coding-enriched.
+Metalink supports metatranscriptomic analysis via the `c`, `cr`, `r`, `v`, `vc`, and `vcr` modes. **rRNA and other non-coding RNA sequences must be removed prior to input** (e.g., with [RiboDetector](https://github.com/hzi-bifo/RiboDetector)).
 
 ```bash
 # Paired-end metatranscriptome (provide rRNA-depleted reads)
-metalink r -i mt_samples_rrnaremoved.tsv -d db_dir -w out_dir --read-type paired-rna -j 4
+metalink r -i mt_samples_rrnaremoved.tsv -d db_dir -w out_dir --skip-level 1 --read-type paired-rna -j 4
 
 # Single-end metatranscriptome (provide rRNA-depleted reads)
-metalink r -i mt_samples_rrnaremoved.tsv -d db_dir -w out_dir --read-type single-rna -j 4
+metalink r -i mt_samples_rrnaremoved.tsv -d db_dir -w out_dir --skip-level 1 --read-type single-rna -j 4
 ```
 
 > [!IMPORTANT]
@@ -649,7 +582,7 @@ metalink c -i pacbio_sample.tsv -d db_dir -w out_dir --read-type pacbio-hifi -j 
 
 ## Resume an interrupted run
 
-Because Metalink is a Snakemake workflow, interrupted runs can be safely resumed without losing progress:
+Because Metalink workflow is built based on Snakemake, interrupted runs can be safely resumed without losing progress:
 
 ```bash
 # Re-run the same command; Snakemake will skip completed steps
@@ -685,7 +618,7 @@ Snakemake tracks completion via output file timestamps. If a job was interrupted
 
 If you use Metalink in your research, please cite:
 
-> Li et al. (202X). Metalink: Joint taxonomic and functional profiling of metagenomes and metatranscriptomes across resolution scales. *(under review)*.
+> Li et al. (2026). Metalink: Joint taxonomic and functional profiling of metagenomes and metatranscriptomes across resolution scales. *bioRxiv*. https://doi.org/10.64898/2026.10.13.759005
 
 Additionally, please cite the underlying tools and databases used in your analysis. See [README_DETAIL.md](README_DETAIL.md) for the complete list of software references.
 

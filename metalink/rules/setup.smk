@@ -270,10 +270,19 @@ for _db_name, _db_info in METALINK_DATABASES.items():
             (
             success=0
             mkdir -p $(dirname {output})
-            # Progress is streamed into the log file (wget dot:giga = 1 MB per
-            # dot); follow it live with: tail -f {log}
+            # Prefer aria2c (16 connections ≈ several-fold faster on our
+            # server); fall back to wget, then curl.  aria2c retries
+            # internally (--max-tries); wget/curl rely on the outer loop.
+            # Progress is streamed into the log file; follow it live with:
+            # tail -f {log}
             for i in $(seq 1 5); do
-                if command -v wget >/dev/null 2>&1; then
+                if command -v aria2c >/dev/null 2>&1; then
+                    if aria2c -x 16 -s 16 -k 4M --file-allocation=none --max-tries=10 --retry-wait=5 -c \
+                        -d $(dirname {output}) -o $(basename {output}) "{params.url}"; then
+                        success=1
+                        break
+                    fi
+                elif command -v wget >/dev/null 2>&1; then
                     if wget --tries 2 --retry-connrefused --waitretry=60 --timeout=60 --progress=dot:giga -O {output} "{params.url}"; then
                         success=1
                         break
@@ -284,7 +293,7 @@ for _db_name, _db_info in METALINK_DATABASES.items():
                         break
                     fi
                 else
-                    echo "Neither wget nor curl is available" >&2
+                    echo "None of aria2c, wget or curl is available" >&2
                     exit 1
                 fi
                 echo "Download attempt $i/5 failed for {output}; retrying in 5s..." >&2
@@ -446,10 +455,13 @@ def _extract_and_verify(db_name):
     # Record the bundle version that was just installed.
     _record_installed_bundle()
 
-    # Remove the archive and its checksum file to save space.
-    os.remove(archive)
-    if os.path.exists(archive + '.md5'):
-        os.remove(archive + '.md5')
+    # Archives are kept by default so the database can be re-extracted or
+    # copied to another machine without re-downloading; Delete_archives
+    # (config key / --delete-archives) opts into removing them.
+    if config.get('Delete_archives', False):
+        os.remove(archive)
+        if os.path.exists(archive + '.md5'):
+            os.remove(archive + '.md5')
 
 
 # ---------------------------------------------------------------------------
@@ -616,8 +628,14 @@ rule download_iphop:
         """
         (
         mkdir -p $(dirname {output})
-        wget -c {params.archive_url} \
-        --no-check-certificate -O {output}
+        if command -v aria2c >/dev/null 2>&1; then
+            aria2c -x 4 -s 4 -k 4M --file-allocation=none --max-tries=10 --retry-wait=5 -c \
+                --check-certificate=false \
+                -d $(dirname {output}) -o $(basename {output}) "{params.archive_url}"
+        else
+            wget -c {params.archive_url} \
+            --no-check-certificate -O {output}
+        fi
         ) > {log} 2>&1
         """
 
@@ -673,7 +691,12 @@ rule download_gtdbtk:
         """
         (
         mkdir -p $(dirname {output})
-        wget -c {params.archive_url} -O {output}
+        if command -v aria2c >/dev/null 2>&1; then
+            aria2c -x 4 -s 4 -k 4M --file-allocation=none --max-tries=10 --retry-wait=5 -c \
+                -d $(dirname {output}) -o $(basename {output}) "{params.archive_url}"
+        else
+            wget -c {params.archive_url} -O {output}
+        fi
         ) > {log} 2>&1
         """
 

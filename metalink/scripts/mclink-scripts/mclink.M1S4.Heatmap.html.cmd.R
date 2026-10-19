@@ -177,6 +177,12 @@ if (!dir.exists(opt$out_DIR)) {
 }
 
 user_files <- dir(opt$mc_completeness_DIR)
+user_files <- user_files[grepl(".tsv$", user_files)]
+if (length(user_files) == 0) {
+  message("No module tables (.tsv) found in ", opt$mc_completeness_DIR,
+          "; skipping HTML heatmap generation (upstream mclink step was skipped or produced no output).")
+  quit(save = "no", status = 0)
+}
 
 for (file in user_files) {
   if (!grepl(".tsv$", file)) {

@@ -123,6 +123,11 @@ rule pmr_m_project_02_quality_gate:
             echo "[INFO] gated genome set unchanged; keep existing {params.genome_list} and {params.gated_dir}" >> {log}
             rm -f {params.genome_list}.tmp
         fi
+        n_mMAG=$(wc -l < {params.genome_list})
+        echo "[INFO] project {wildcards.project}: $n_mMAG mMAG(s) passed the quality gate." | tee -a {log} >&2
+        if [ "$n_mMAG" -eq 0 ]; then
+            echo "[WARNING] project {wildcards.project}: no mMAGs passed the quality gate; downstream reference/mapping will be empty." | tee -a {log} >&2
+        fi
         touch {output.mk}
         """
 
@@ -145,7 +150,12 @@ rule pmr_m_project_03_index_bwamem:
     shell:
         """
         mkdir -p $(dirname {params.MAGs_dRep}) 2> {log}
-        find -L {params.MAGs_folder} -type f -print0 | xargs -0 cat > {params.MAGs_dRep} 2>> {log}
+        find -L {params.MAGs_folder} -type f -print0 | xargs -0 -r cat > {params.MAGs_dRep} 2>> {log}
+        if [ ! -s {params.MAGs_dRep} ]; then
+            echo "ERROR: project {wildcards.project}: no mMAGs passed the quality gate; reference {params.MAGs_dRep} is empty." >> {log}
+            echo "ERROR [pmr_m_project_03_index] project {wildcards.project}: no mMAGs passed the quality gate; cannot build an empty reference. See log: {log}" >&2
+            exit 1
+        fi
         bwa index -p {params.prefix} {params.MAGs_dRep} 2>> {log}
         touch {output.mk}
         """
@@ -199,7 +209,12 @@ rule pmr_m_project_03_index_bwamem2:
     shell:
         """
         mkdir -p $(dirname {params.MAGs_dRep}) 2> {log}
-        find -L {params.MAGs_folder} -type f -print0 | xargs -0 cat > {params.MAGs_dRep} 2>> {log}
+        find -L {params.MAGs_folder} -type f -print0 | xargs -0 -r cat > {params.MAGs_dRep} 2>> {log}
+        if [ ! -s {params.MAGs_dRep} ]; then
+            echo "ERROR: project {wildcards.project}: no mMAGs passed the quality gate; reference {params.MAGs_dRep} is empty." >> {log}
+            echo "ERROR [pmr_m_project_03_index] project {wildcards.project}: no mMAGs passed the quality gate; cannot build an empty reference. See log: {log}" >&2
+            exit 1
+        fi
         bwa-mem2 index -p {params.prefix} {params.MAGs_dRep} >> {log} 2>&1
         touch {output.mk}
         """
@@ -253,7 +268,12 @@ rule pmr_m_project_03_index_minibwa:
     shell:
         """
         mkdir -p $(dirname {params.MAGs_dRep}) 2> {log}
-        find -L {params.MAGs_folder} -type f -print0 | xargs -0 cat > {params.MAGs_dRep} 2>> {log}
+        find -L {params.MAGs_folder} -type f -print0 | xargs -0 -r cat > {params.MAGs_dRep} 2>> {log}
+        if [ ! -s {params.MAGs_dRep} ]; then
+            echo "ERROR: project {wildcards.project}: no mMAGs passed the quality gate; reference {params.MAGs_dRep} is empty." >> {log}
+            echo "ERROR [pmr_m_project_03_index] project {wildcards.project}: no mMAGs passed the quality gate; cannot build an empty reference. See log: {log}" >&2
+            exit 1
+        fi
         minibwa index {params.MAGs_dRep} {params.prefix} -t {threads} 2>> {log}
         touch {output.mk}
         """
@@ -309,7 +329,12 @@ rule pmr_m_project_03_index_strobealign:
     shell:
         """
         mkdir -p $(dirname {params.MAGs_dRep}) 2> {log}
-        find -L {params.MAGs_folder} -type f -print0 | xargs -0 cat > {params.MAGs_dRep} 2>> {log}
+        find -L {params.MAGs_folder} -type f -print0 | xargs -0 -r cat > {params.MAGs_dRep} 2>> {log}
+        if [ ! -s {params.MAGs_dRep} ]; then
+            echo "ERROR: project {wildcards.project}: no mMAGs passed the quality gate; reference {params.MAGs_dRep} is empty." >> {log}
+            echo "ERROR [pmr_m_project_03_index] project {wildcards.project}: no mMAGs passed the quality gate; cannot build an empty reference. See log: {log}" >&2
+            exit 1
+        fi
 
         function process_number() {{
             local num=${{1:-0}}

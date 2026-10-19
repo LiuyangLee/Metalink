@@ -1,4 +1,4 @@
-cd /data1/liliuyang/snakemake/metalink_history/Metalink-0.3.7
+cd /data1/liliuyang/snakemake/metalink_history/Metalink-0.3.8
 
 # metalink main env
 mamba env create -f metalink/envs/metalink-main.yaml

@@ -93,6 +93,12 @@ if(! dir.exists(out_DIR)){
 }
 
 user_file <- dir(user_Sample_in_DIR)
+user_file <- user_file[grepl(".tsv", user_file)]
+if (length(user_file) == 0) {
+  message("No module tables (.tsv) found in ", user_Sample_in_DIR,
+          "; skipping heatmap generation (upstream mclink step was skipped or produced no output).")
+  quit(save = "no", status = 0)
+}
 for (file in user_file) {
   if (grepl(".tsv", file)){
     file_name = gsub(".tsv", "", file)

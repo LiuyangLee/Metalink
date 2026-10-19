@@ -106,6 +106,9 @@ rule pmr_vm_project_02_quality_gate:
     input:
         m_tax = path + 'results/m-project/04_summary/{project}/mMAG_summary_info.tsv',
         v_tax = lambda wildcards: pmr_vm_summary_input(wildcards),
+        # declare the project vclust output so the gate cannot read the
+        # clusters_fna directory before v_project_01_vclust has filled it
+        vclust_fna = path + 'results/v-project/06_vclust/{project}/vMAGs_vclust.fna',
     output:
         m_filter = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAG_summary_info.filter.tsv',
         v_filter = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAG_summary_info.filter.tsv',
@@ -261,8 +264,8 @@ rule pmr_vm_project_03_build_ref:
         # (coverm genome IDs) must be disjoint, otherwise the merged reference
         # and the per-genome link directory would silently collide.
         find -L {params.MAGs_folder} -maxdepth 1 -type f \\( -name '*.fa' -o -name '*.fna' \\) -print0 2>/dev/null \
-            | xargs -0 -r cat 2>/dev/null | grep '^>' | awk '{{print $1}}' | sed 's/^>//' | sort -u > {output.genomes_dir}/.mMAG.seqids
-        grep '^>' {params.gated_fna} 2>/dev/null | awk '{{print $1}}' | sed 's/^>//' | sort -u > {output.genomes_dir}/.vMAG.seqids
+            | xargs -0 -r cat 2>/dev/null | grep '^>' | awk '{{print $1}}' | sed 's/^>//' | sort -u > {output.genomes_dir}/.mMAG.seqids || true
+        grep '^>' {params.gated_fna} 2>/dev/null | awk '{{print $1}}' | sed 's/^>//' | sort -u > {output.genomes_dir}/.vMAG.seqids || true
         comm -12 {output.genomes_dir}/.mMAG.seqids {output.genomes_dir}/.vMAG.seqids > {output.genomes_dir}/.conflict.seqids
 
         find -L {params.MAGs_folder} -maxdepth 1 -type f \\( -name '*.fa' -o -name '*.fna' \\) -printf '%f\\n' 2>/dev/null \
@@ -270,6 +273,14 @@ rule pmr_vm_project_03_build_ref:
         find -L {params.vMAGs_folder} -maxdepth 1 -type f -name '*.fna' -printf '%f\\n' 2>/dev/null \
             | sed 's/\\.[^.]*$//' | sort -u > {output.genomes_dir}/.vMAG.gids
         comm -12 {output.genomes_dir}/.mMAG.gids {output.genomes_dir}/.vMAG.gids > {output.genomes_dir}/.conflict.gids
+
+        # Report how many genomes passed the quality gate on each side before merging.
+        n_mMAG=$(wc -l < {output.genomes_dir}/.mMAG.gids)
+        n_vMAG=$(wc -l < {output.genomes_dir}/.vMAG.gids)
+        echo "[INFO] project {wildcards.project}: $n_mMAG mMAG(s) and $n_vMAG vMAG(s) passed the quality gate and will be merged into the reference." | tee -a {log} >&2
+        if [ "$n_mMAG" -eq 0 ] || [ "$n_vMAG" -eq 0 ]; then
+            echo "[WARNING] project {wildcards.project}: one genome set is empty (mMAGs=$n_mMAG, vMAGs=$n_vMAG); the merged reference will contain only one side. Downstream results will lack the missing side." | tee -a {log} >&2
+        fi
 
         if [ -s {output.genomes_dir}/.conflict.seqids ] || [ -s {output.genomes_dir}/.conflict.gids ]; then
             echo "ERROR: genome ID conflicts between mMAGs and vMAGs for {wildcards.project}." >> {log}

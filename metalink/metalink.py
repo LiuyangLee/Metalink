@@ -7,6 +7,7 @@ import multiprocessing
 import subprocess
 import shlex
 import tempfile
+import time
 import click
 from pathlib import Path
 from ruamel.yaml import YAML, CommentedMap
@@ -50,6 +51,105 @@ def _get_nested(d, path, default=None):
             return default
         d = d[k]
     return d
+
+def _warn_zero_kraken2_classification(work_dir, since, bracken_level=None,
+                                      bracken_threshold=0):
+    """Warn about problematic kraken2 reports from this run.
+
+    Two cases are flagged (only reports written after `since`):
+      1. 0% classified sequences at all (taxonomy and function reports).
+      2. only when bracken_level is given (r mode runs bracken): taxonomy
+         reports where reads were classified but none at the bracken level,
+         so bracken abundance estimation was skipped.
+    """
+    import glob
+    try:
+        pattern = os.path.join(work_dir, 'results', '**',
+                               '*.kraken2.report.tsv')
+        zero = []
+        no_species = []
+        for rep in glob.glob(pattern, recursive=True):
+            if os.path.getmtime(rep) < since:
+                continue
+            # The bracken-related check only applies to taxonomy reports of
+            # runs that include a bracken step (r mode); LCFH function
+            # reports reuse the D/P/.../S rank codes for functional levels.
+            is_taxonomy = 'taxonomy' in rep and bracken_level is not None
+            root_reads = None
+            u_reads = None
+            has_level_reads = False
+            with open(rep) as f:
+                for line in f:
+                    fields = line.rstrip('\n').split('\t')
+                    # kraken2 report: pct, clade reads, direct reads, rank code, ...
+                    if len(fields) < 6:
+                        continue
+                    rank = fields[3].strip()
+                    if rank == 'U':
+                        try:
+                            u_reads = float(fields[2])
+                        except ValueError:
+                            pass
+                    elif rank == 'R':
+                        # clade-level read count under root = total classified;
+                        # more reliable than the rounded percentage column
+                        try:
+                            root_reads = float(fields[1])
+                        except ValueError:
+                            pass
+                    elif is_taxonomy and rank == bracken_level:
+                        # bracken keeps a node when its clade read count
+                        # (field 1) is >= threshold; reads classified deeper
+                        # are included there and mapped up during reestimation
+                        try:
+                            if float(fields[1]) >= max(int(bracken_threshold), 1):
+                                has_level_reads = True
+                        except (ValueError, TypeError):
+                            pass
+            # A report with zero classifications contains only the U line
+            # (kraken2 omits the root row), so fall back to the U count.
+            classified = root_reads if root_reads is not None else 0.0
+            if root_reads is None and u_reads is None:
+                continue
+            if classified == 0:
+                zero.append(rep)
+            elif is_taxonomy and not has_level_reads:
+                no_species.append(rep)
+        def _label(rep):
+            """sample name plus the classification stage the report belongs to"""
+            sample = os.path.basename(rep).split('.kraken2.report.tsv')[0]
+            if 'taxonomy' in rep:
+                return '{} (taxonomy)'.format(sample)
+            if 'function' in rep:
+                return '{} (function)'.format(sample)
+            return sample
+        if zero:
+            sample_names = ', '.join(_label(r) for r in zero)
+            logging.warning(
+                '%d kraken2 report(s) had 0%% classified sequences: %s\n'
+                'This often happens when a reduced kraken2 database (e.g. '
+                'kraken2_16GB) is used together with a high confidence threshold.\n'
+                'Try lowering the kraken2 confidence in your config and rerun.\n'
+                'See the FAQ "How do I choose the kraken2 confidence thresholds for '
+                'taxonomic and functional classification?" in README_DETAIL.md '
+                'for guidance.',
+                len(zero), sample_names)
+        if no_species:
+            sample_names = ', '.join(_label(r) for r in no_species)
+            logging.warning(
+                '%d kraken2 taxonomy report(s) had classified reads but NONE '
+                'classified at the bracken level (%s): %s\n'
+                'Bracken abundance estimation (bracken -l %s) was skipped for them '
+                '(empty Bracken outputs were produced).\n'
+                'This often happens with a reduced kraken2 database and/or a high '
+                'confidence threshold; consider lowering '
+                '--reads-taxonomy-kraken2-confidence and rerun.\n'
+                'See the FAQ "How do I choose the kraken2 confidence thresholds for '
+                'taxonomic and functional classification?" in README_DETAIL.md '
+                'for guidance.',
+                len(no_species), bracken_level, sample_names, bracken_level)
+    except Exception:
+        pass
 
 def _validate_cami_gtdbtk_compatibility(config, mode):
     """CAMI taxonomic profile output is disabled when mMAG taxonomy uses GTDB-Tk.
@@ -127,6 +227,22 @@ def _validate_pmr_iphop_custom_mags_dir(config, mags):
             "Use 'none' or an absolute path to a custom MAGs directory.".format(
                 ' -> '.join(iphop_key), custom)
         )
+
+
+def _validate_bracken_level(config, mode):
+    """r mode only: bracken_level must be one of D/P/C/O/F/G/S; an invalid
+    value would silently skip bracken for every sample."""
+    if mode != 'r':
+        return
+    lvl = _get_nested(config, ['Params_r_sample', '03_taxonomy', 'bracken_level'])
+    if lvl is None:
+        return  # template default applies
+    lvl = str(lvl).strip()
+    if lvl not in set('DPCOFGS') or len(lvl) != 1:
+        raise ValueError(
+            "Invalid bracken_level {!r} in Params_r_sample -> 03_taxonomy; "
+            "choose one of D/P/C/O/F/G/S.".format(lvl))
+    config['Params_r_sample']['03_taxonomy']['bracken_level'] = lvl
 
 
 def _validate_read_type_assembly_method(config, mode, skip_level=0):
@@ -661,6 +777,30 @@ def make_config(mode, input_tsv, threads, cli_overrides, config_f, db_dir=None,
                         _downloaded_sizes.get('kraken2_function_db_size', '') or \
                         'kraken2_raw'
 
+    # With a reduced kraken2 database (anything other than the full
+    # kraken2_raw), default the kraken2 classification confidence to 0:
+    # sparser k-mer coverage means the full-database thresholds (0.6/0.7)
+    # would leave most sequences unclassified. Explicit CLI values are
+    # applied afterwards and take precedence over this default.
+    for _opt_name, (_yaml_path, _default, *_) in PARAMS_HELP.get(mode, {}).items():
+        if _yaml_path[-1] != 'confidence':
+            continue
+        _section = _yaml_path[-2]
+        if 'taxonomy_kraken2' in _section and _kraken2_tax_size != 'kraken2_raw':
+            pass
+        elif 'function_kraken2' in _section and _kraken2_fun_size != 'kraken2_raw':
+            pass
+        else:
+            continue
+        if mode == 'pmr':
+            _yaml_path = _resolve_mags_placeholder(_yaml_path, mags)
+        if _get_nested(cfg, _yaml_path) is not None:
+            set_nested(cfg, _yaml_path, 0.0)
+            logging.info(
+                'Setting config %s to 0.0 (reduced kraken2 database: %s)',
+                ' -> '.join(_yaml_path),
+                _kraken2_tax_size if 'taxonomy' in _section else _kraken2_fun_size)
+
     # Resolve kraken2 database build versions from the bundle manifest.
     _kraken2_tax_version = _db_section.get('kraken2_taxonomy_db_version', '') or \
                            _get_nested(_DB_BUNDLE, ['metalink_built_databases', 'kraken2_taxonomy', 'version'], '') or \
@@ -836,6 +976,7 @@ def make_config(mode, input_tsv, threads, cli_overrides, config_f, db_dir=None,
 
     # Validate read_type and assembly_method compatibility for modes that actually run assembly
     _validate_read_type_assembly_method(cfg, mode, skip_level)
+    _validate_bracken_level(cfg, mode)
 
     _rules_dir = _rules_dir_for(cfg['read_type'])
     _targets_dir = _targets_dir_for(cfg['read_type'])
@@ -1821,7 +1962,7 @@ PARAMS_HELP = {
             '02_FragGeneScanRs_stats: Threads.'),
         'reads_taxonomy_threads': (
             ['Params_r_sample', '03_taxonomy', 'threads'], 60, int,
-            '03_taxonomy: Threads for [kraken2/bracken].'),
+            '03_taxonomy: Threads for [kraken2].'),
         'reads_taxonomy_kraken2_confidence': (
             ['Params_r_sample', '03_taxonomy_kraken2', 'confidence'], 0.6, float,
             '\b\n03_taxonomy_kraken2: Confidence threshold [0-1] for taxonomic classification for reads using kraken2 as taxonomy classifier.\n'
@@ -1830,6 +1971,15 @@ PARAMS_HELP = {
         'reads_taxonomy_kraken2_extra_args': (
             ['Params_r_sample', '03_taxonomy_kraken2', 'extra_args'], '', str,
             '03_taxonomy_kraken2: Extra arguments forwarded to kraken2 (e.g., "--memory-mapping").'),
+        'reads_taxonomy_bracken_level': (
+            ['Params_r_sample', '03_taxonomy', 'bracken_level'], 'S', str,
+            '\b\n03_taxonomy: Taxonomic level at which bracken re-estimates abundances, using one of [D/P/C/O/F/G/S].'
+        ),
+        'reads_taxonomy_bracken_threshold': (
+            ['Params_r_sample', '03_taxonomy', 'bracken_threshold'], 0, int,
+            '\b\n03_taxonomy: Minimum number of clade reads a taxon must have at the bracken level\n'
+            'to be included in abundance re-estimation (bracken -t; 0 = keep everything).'
+        ),
         'reads_function_classify_method': (
             ['Params_r_sample', '04_function', 'reads_function_classify_method'], 'kraken2', str,
             '04_function: reads functional classifier using one of [kraken2/emapper].'
@@ -7288,7 +7438,14 @@ def exec_workflow(mode, input_tsv, working_dir, jobs,
                               dryrun, snakemake_args)
     if not silent:
         logging.info('Executing: %s' % cmd)
+    _t0 = time.time()
     subprocess.run(cmd, shell=True, check=True)
+    _warn_zero_kraken2_classification(
+        working_dir, _t0,
+        _get_nested(config, ['Params_r_sample', '03_taxonomy', 'bracken_level'])
+        if mode == 'r' else None,
+        _get_nested(config, ['Params_r_sample', '03_taxonomy', 'bracken_threshold'])
+        if mode == 'r' else 0)
 
 def exec_workflow_with_existing_config(mode, config_f, jobs, verbose, silent,
                              dryrun, snakemake_args, **kwargs):
@@ -7407,6 +7564,7 @@ def exec_workflow_with_existing_config(mode, config_f, jobs, verbose, silent,
             logging.info(f'workflow_includes rebuilt from skip_level={skip_level}')
 
     _validate_read_type_assembly_method(config, mode, skip_level)
+    _validate_bracken_level(config, mode)
 
     if overridden:
         tmp_dir = os.path.dirname(os.path.abspath(config_f))
@@ -7426,7 +7584,14 @@ def exec_workflow_with_existing_config(mode, config_f, jobs, verbose, silent,
                               dryrun, snakemake_args)
     if not silent:
         logging.info('Executing: %s' % cmd)
+    _t0 = time.time()
     subprocess.run(cmd, shell=True, check=True)
+    _warn_zero_kraken2_classification(
+        config.get('Directory', {}).get('work', '.'), _t0,
+        _get_nested(config, ['Params_r_sample', '03_taxonomy', 'bracken_level'])
+        if mode == 'r' else None,
+        _get_nested(config, ['Params_r_sample', '03_taxonomy', 'bracken_threshold'])
+        if mode == 'r' else 0)
 
 def exec_workflow_generate_config_only(mode, input_tsv, jobs, working_dir,
                                        db_dir, project_name=None,
@@ -7462,6 +7627,10 @@ def add_mode_options(mode):
         for prefix, params in reversed(section_items):
             section_name = get_section_name(prefix)
             for opt_name, yaml_path, default, typ, help_txt in reversed(params):
+                if yaml_path and yaml_path[-1] == 'confidence' and 'kraken2' in str(yaml_path[-2]):
+                    help_txt += ('\nWith a reduced kraken2 database (e.g. kraken2_16GB), generated '
+                                 'configs default this to 0; the default shown applies to the full '
+                                 'database (kraken2_raw).')
                 if typ == bool:
                     f = click.option(
                         f'--{opt_name.replace("_", "-")}',
@@ -7626,6 +7795,66 @@ common_options = [
     click.argument('snakemake_args', nargs=-1, type=click.UNPROCESSED)
 ]
 
+def _validate_passthrough_args(mode, snakemake_args):
+    """Reject Metalink-looking options that were silently swallowed into
+    snakemake_args (ignore_unknown_options=True passes them through).
+
+    Catches three mistake classes:
+      1. single-dash long options: -merge-output-detail (meant: --merge-output-detail)
+      2. valid Metalink options used with the wrong mode (silently ignored)
+      3. close misspellings of Metalink long options (--merge-output-detai)
+    Genuine Snakemake options (e.g. --ri, -k, --rerun-incomplete) pass through.
+    """
+    import difflib
+    # option name in dash form -> set of modes that accept it
+    opt_to_modes = {}
+    for _m, _specs in PARAMS_HELP.items():
+        for _opt in _specs:
+            opt_to_modes.setdefault(_opt.replace('_', '-'), set()).add(_m)
+    # mode-agnostic options defined outside PARAMS_HELP (consumed by click
+    # when spelled correctly; listed here only for diagnostics)
+    for _opt in ('read-type', 'skip-level', 'input-tsv', 'db-dir',
+                 'working-dir', 'jobs', 'verbose', 'silent', 'dry-run',
+                 'generate-config', 'configfile', 'project-name',
+                 'run-project', 'taxonomy-rank', 'kraken2-taxonomy-jobs',
+                 'mags', 'databases', 'kraken2-taxonomy-db-size',
+                 'kraken2-function-db-size', 'delete-archives'):
+        opt_to_modes.setdefault(_opt, set()).add('*')
+
+    # Single-dash long-option typos (e.g. -merge-output-detail) are mangled by
+    # click's short-option clustering before they reach snakemake_args, so they
+    # must be detected on the raw command line. A single leading dash followed
+    # by letters containing another dash can never be a valid short-option
+    # cluster (-pn), so this is unambiguous.
+    for tok in sys.argv[2:]:
+        if (tok.startswith('-') and not tok.startswith('--')
+                and len(tok) > 2 and tok[1].isalpha() and '-' in tok[1:]):
+            name = tok[1:].split('=', 1)[0]
+            hint = (" Did you mean '--{}'?".format(name)
+                    if name in opt_to_modes else '')
+            raise click.BadParameter(
+                "'{}' looks like a long option written with a single dash; "
+                "it was NOT applied.{}".format(tok, hint))
+
+    for tok in snakemake_args:
+        if not tok.startswith('--'):
+            continue
+        name = tok.lstrip('-').split('=', 1)[0]
+        if not name or not name[0].isalpha():
+            continue
+        if name in opt_to_modes and mode not in opt_to_modes[name] \
+                and '*' not in opt_to_modes[name]:
+            raise click.BadParameter(
+                "'{}' is not a Metalink option for mode '{}' (valid for: {}); "
+                "it was NOT applied.".format(tok, mode,
+                                             ', '.join(sorted(opt_to_modes[name]))))
+        if name not in opt_to_modes:
+            close = difflib.get_close_matches(name, opt_to_modes, n=1, cutoff=0.85)
+            if close:
+                raise click.BadParameter(
+                    "unknown option '{}'. Did you mean '--{}'?".format(tok, close[0]))
+
+
 def build_command(mode):
     """Generate a top-level command: metalink <mode>"""
     def cmd_func(input_tsv, working_dir, jobs, verbose, silent, dryrun,
@@ -7642,6 +7871,8 @@ def build_command(mode):
         # --mags is pmr-only, so reject it explicitly for every other mode.
         if mode != 'pmr' and any(a == '--mags' or a.startswith('--mags=') for a in snakemake_args):
             raise click.BadParameter('--mags is only valid for the pmr mode.')
+
+        _validate_passthrough_args(mode, snakemake_args)
 
         if generate_config and configfile:
             raise click.BadParameter(
@@ -7984,7 +8215,7 @@ def _generated_download_config_path(db_dir):
 
 
 def make_download_config(db_dir, databases, kraken2_taxonomy_db_size,
-                         kraken2_function_db_size, config_f):
+                         kraken2_function_db_size, delete_archives, config_f):
     """Build config.download.yaml from the download template plus CLI options."""
     config_dir = Path(__file__).with_name('config')
     download_template = config_dir / 'template.config.download.yaml'
@@ -8006,6 +8237,7 @@ def make_download_config(db_dir, databases, kraken2_taxonomy_db_size,
 
     cfg['Kraken2_taxonomy_db_size'] = kraken2_taxonomy_db_size
     cfg['Kraken2_function_db_size'] = kraken2_function_db_size
+    cfg['Delete_archives'] = bool(delete_archives)
     # Re-assigning cfg['Databases'] above drops the template comment that
     # followed the list; attach the size-variant documentation explicitly.
     cfg.yaml_set_comment_before_after_key(
@@ -8094,6 +8326,14 @@ def make_download_config(db_dir, databases, kraken2_taxonomy_db_size,
     help='size variant of the MetaLink kraken2 function database, using one of [kraken2_16GB/kraken2_raw]',
 )
 @click.option(
+    '--delete-archives', 'delete_archives', is_flag=True,
+    help=
+    '\b\nDelete the downloaded archives after successful extraction (flag only).\n'
+    'By default the .tar.gz archives and their .md5 files are kept in DBDIR/downloads/\n'
+    'so databases can be re-extracted or copied to another machine without\n'
+    're-downloading. With this flag they are removed to save disk space.'
+)
+@click.option(
     '--generate-config', 'generate_config', is_flag=True,
     help=
     '\b\nOnly generate the config file (flag only).\n'
@@ -8107,10 +8347,9 @@ def make_download_config(db_dir, databases, kraken2_taxonomy_db_size,
     metavar='PATH',
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
     help=(
-        'run from an existing config.download.yaml (see --generate-config); '
-        'config-source options (-d, --databases, --kraken2-taxonomy-db-size, '
-        '--kraken2-function-db-size) given on the command line override the '
-        'file values for this run without modifying the file.'
+        '\b\nrun from an existing config.download.yaml (see --generate-config); config-source options\n'
+        '(-d, --databases, --kraken2-taxonomy-db-size, --kraken2-function-db-size)\n'
+        'given on the command line override the file values for this run without modifying the file.'
     ),
 )
 @click.option('--verbose', is_flag=True,
@@ -8133,7 +8372,7 @@ def make_download_config(db_dir, databases, kraken2_taxonomy_db_size,
 @click.argument('snakemake_args', nargs=-1, type=click.UNPROCESSED)
 def download_database(db_dir, jobs, databases,
                       kraken2_taxonomy_db_size, kraken2_function_db_size,
-                      generate_config, configfile,
+                      delete_archives, generate_config, configfile,
                       verbose, silent, dryrun, snakemake_args):
     '''Download MetaLink reference databases.
 
@@ -8153,6 +8392,8 @@ def download_database(db_dir, jobs, databases,
     '''
     set_logger(silent=silent)
 
+    _validate_passthrough_args('download-database', snakemake_args)
+
     if generate_config and configfile:
         raise click.BadParameter(
             '--generate-config and --configfile are mutually exclusive.'
@@ -8170,6 +8411,7 @@ def download_database(db_dir, jobs, databases,
         'databases': '--databases',
         'kraken2_taxonomy_db_size': '--kraken2-taxonomy-db-size',
         'kraken2_function_db_size': '--kraken2-function-db-size',
+        'delete_archives': '--delete-archives',
     }
     ctx = click.get_current_context()
     provided_config_sources = {
@@ -8181,7 +8423,7 @@ def download_database(db_dir, jobs, databases,
     if generate_config:
         config_f = _generated_download_config_path(db_dir)
         make_download_config(db_dir, databases, kraken2_taxonomy_db_size,
-                             kraken2_function_db_size, config_f)
+                             kraken2_function_db_size, delete_archives, config_f)
         logging.info('Config file written to %s', config_f)
         return
 
@@ -8222,6 +8464,12 @@ def download_database(db_dir, jobs, databases,
                 if not silent:
                     logging.info("Setting config %s to %r (from CLI --%s)",
                                  _key, _val, _name.replace('_', '-'))
+        if 'delete_archives' in provided_config_sources:
+            cfg['Delete_archives'] = delete_archives
+            overridden = True
+            if not silent:
+                logging.info("Setting config Delete_archives to %r (from CLI --delete-archives)",
+                             delete_archives)
         if overridden:
             tmp_dir = os.path.dirname(os.path.abspath(config_f))
             fd, tmp_path = tempfile.mkstemp(
@@ -8239,7 +8487,7 @@ def download_database(db_dir, jobs, databases,
         os.makedirs(db_dir, exist_ok=True)
         config_f = _generated_download_config_path(db_dir)
         make_download_config(db_dir, databases, kraken2_taxonomy_db_size,
-                             kraken2_function_db_size, config_f)
+                             kraken2_function_db_size, delete_archives, config_f)
         if not silent:
             logging.info('Config file written to %s', config_f)
             logging.info('Using config file: %s', config_f)
