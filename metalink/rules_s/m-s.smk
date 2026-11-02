@@ -381,6 +381,7 @@ rule m_sample_06_drep_eachsample_95:
 rule m_sample_07_coverm_eachsample:
     input:
         mk = path + 'markers/b-sample/08_bin_prodigal/{sample}.mk',
+        bam = path + 'results/b-sample/03_mapping/' + base_sample_mapping_method + '/{sample}.bam',
     output:
         out_coverm = path + 'results/m-sample/07_coverm_eachsample/{sample}.tsv',
     threads: config["Params_m_sample"]["07_coverm_eachsample"]["threads"]
@@ -388,7 +389,6 @@ rule m_sample_07_coverm_eachsample:
         config["conda_envs"]["metalink-main"]
     priority: 80
     params:
-        bam = path + 'results/b-sample/03_mapping/' + base_sample_mapping_method + '/{sample}.bam',
         MAGs_eachsample = path + 'results/b-sample/08_gather_bin_high_quality/bin_genome_fna_raw/{sample}/',
         genometype = "fa",
         method = config["Params_m_sample"]["07_coverm_eachsample"]["method"],
@@ -413,16 +413,30 @@ rule m_sample_07_coverm_eachsample:
             touch {output.out_coverm}
         else
             echo "Calculating abundance..."
+            COVERM_EXIT=0
             coverm genome \
                 -t {threads} \
                 -m {params.method} \
                 --min-read-percent-identity {params.min_read_percent_identity} \
                 --min-read-aligned-length {params.min_read_aligned_length} \
                 --contig-end-exclusion {params.contig_end_exclusion} \
-                --bam-files {params.bam} \
+                --bam-files {input.bam} \
                 --genome-fasta-directory $MAGs_eachsample \
                 -x {params.genometype} \
-                -o {output.out_coverm} {params.extra_args}
+                -o {output.out_coverm} {params.extra_args} || COVERM_EXIT=$?
+            if [ $COVERM_EXIT -ne 0 ]; then
+                if grep -q "no found reference sequences" {log}; then
+                    echo "CoverM: no reference sequences in the BAM overlap the supplied genomes, writing zero-abundance table for all genomes..."
+                    rm -f {output.out_coverm}
+                    echo -e "Genome\t{wildcards.sample} Trimmed Mean" > {output.out_coverm}
+                    find $MAGs_eachsample -maxdepth 1 -name "*.{params.genometype}" | while read -r g; do
+                        echo -e "$(basename "$g" .{params.genometype})\t0" >> {output.out_coverm}
+                    done
+                else
+                    echo "CoverM failed with exit code $COVERM_EXIT."
+                    exit $COVERM_EXIT
+                fi
+            fi
         fi >> {log} 2>&1
         """
 

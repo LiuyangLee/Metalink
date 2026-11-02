@@ -1,3 +1,16 @@
+### Metalink 0.3.9
+
+Release notes for Metalink 0.3.9 (2026-11-03).
+
+- **Project-level BAM mapping summary**: each run now aggregates the per-sample `samtools flagstat` results into a project summary table (one row per sample, all metrics) and a summary figure showing the sorted per-sample mapping-rate curve and sample counts in the `<50 / 50–80 / 80–95 / ≥95` bins. Produced by `b` mode (`results/b-project/04_bam_summary/{project}.bam_mapping_summary.tsv` / `.pdf`) and by `pmr --mags m`|`v`|`vm`, which also gain a per-sample flagstat step (`results/pmr_*-sample/04_bam_summary/` and `results/pmr_*-project/04_bam_summary/`).
+- **Project-level MAG quality summary**: MAG-bearing workflows (`b`, `m`, `mc`, `mcr`, `vm`, `vmc`, `vmcr`, and `pmr --mags m`|`vm`, all skip-levels) now aggregate the per-sample CheckM stats into one table (one row per MAG, with an MIMAG `quality_tier` column) and a completeness-vs-contamination figure with marginal histograms: `results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.tsv` / `.pdf`. Samples whose checkm table is empty (no MAGs) are skipped with a note instead of aborting the summary.
+- **pmr MAG reference uses dereplicated representatives**: the `--mags m`/`vm` quality gate previously listed QC-passed genomes by their own IDs, silently dropping non-representative genomes (not present in the dRep95 reference) and leaking rows marked `CheckM_filter` (MAGs excluded from dRep). The gate now maps each passing genome to its `dRep_95_representative` and drops `CheckM_filter` rows, so the gated list, the mapping reference, and the abundance matrix contain exactly the same genomes.
+- **Custom mMAG collections in pmr**: in `pmr --mags m`/`vm`, the `mMAG_dir` column now accepts mMAGs from any source (e.g. a reference genome collection or a mixed mMAG set shared by all samples), enabling cross-sample analysis of a custom genome collection; only contig-ID uniqueness per directory is required, and vMAGs cannot be supplied externally (documented in both READMEs and validated at startup).
+- **Fixed pmr quality-gate crash on missing summary table**: `pmr --mags v`/`vm` previously fed the 10_summary marker (empty) to the taxonomy filter whenever `vMAG_summary_info.tsv` did not exist yet at workflow-parse time (fresh workdirs, or after the table was cleaned), crashing the run. The gate now always reads the actual summary table via an explicit path.
+- **Reserved-delimiter and contig-ID validation**: sample names, user-provided contig FASTA headers, and mMAG file names/headers are now checked for `---` (Metalink's internal `sample---contig` / `genome---ORF` delimiter), and mMAG directories are checked for duplicate contig IDs across genomes (they collide in the concatenated mapping reference) when the workflow starts, with the exact file/line/header reported. In `pmr` this uniqueness check extends across all `mMAG_dir`s of the project (one shared mapping reference); sharing the same genome across samples/directories is allowed. Previously such inputs only failed deep inside the merge or mapping steps with cryptic errors.
+- **Fixed `--target-stage function` pulling in the taxonomy chain**: in `r` mode, function-only runs no longer run kraken2 taxonomy and bracken.
+
+
 ### Metalink 0.3.8
 
 Release notes for Metalink 0.3.8 (2026-10-19).

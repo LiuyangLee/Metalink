@@ -87,17 +87,6 @@ def pmr_vm_summary_input(wildcards):
         return f
     return path + 'markers/v-project/10_summary/' + pmr_vm_iphop_suffix + '/{project}.mk'.format(project=wildcards.project)
 
-def pmr_vm_gated_input(wildcards, artifact):
-    # The gated genome artifacts are content-managed side effects of the quality
-    # gate. They are deliberately NOT declared outputs: Snakemake wipes declared
-    # outputs before every rerun (prepare() -> remove_existing_output()), which
-    # would defeat the gate's write-if-changed logic. Depend on the artifact once
-    # it exists; on a fresh DAG fall back to the gate marker for ordering.
-    f = path + 'results/pmr_vm-project/02_quality_gate/{project}.{artifact}'.format(project=wildcards.project, artifact=artifact)
-    if os.path.exists(f):
-        return f
-    return path + 'markers/pmr_vm-project/02_quality_gate/{project}.mk'.format(project=wildcards.project)
-
 # the mask_viral marker ({project}.mask_viral.mk) also matches the gate
 # marker pattern ({project}.mk); prefer mask_viral for such files
 ruleorder: pmr_vm_project_02_mask_viral > pmr_vm_project_02_quality_gate
@@ -112,6 +101,9 @@ rule pmr_vm_project_02_quality_gate:
     output:
         m_filter = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAG_summary_info.filter.tsv',
         v_filter = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAG_summary_info.filter.tsv',
+        m_genome_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAGs_gated.list',
+        v_genome_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_gated.list',
+        gated_fna = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_vclust.gated.fna',
         mk = path + 'markers/pmr_vm-project/02_quality_gate/{project}.mk',
     params:
         MAGs_taxonomy_classify_method = MAGs_taxonomy_classify_method,
@@ -120,11 +112,9 @@ rule pmr_vm_project_02_quality_gate:
         MAGs_min_completeness2 = config["Params_pmr_vm_project"]["02_quality_gate"]["MAGs_min_completeness2"],
         MAGs_max_contamination2 = config["Params_pmr_vm_project"]["02_quality_gate"]["MAGs_max_contamination2"],
         checkv_quality = config["Params_pmr_vm_project"]["02_quality_gate"]["checkv_quality"],
+        v_tax_tsv = path + 'results/v-project/10_summary/' + pmr_vm_iphop_suffix + '/{project}/vMAG_summary_info.tsv',
         vclust_dir = path + 'results/v-project/06_vclust/{project}/vMAGs_clusters_fna/',
         gated_dir = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_gated',
-        gated_fna = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_vclust.gated.fna',
-        m_genome_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAGs_gated.list',
-        v_genome_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_gated.list',
     conda: config["conda_envs"]["metalink-main"]
     priority: 1
     threads: 1
@@ -144,48 +134,62 @@ rule pmr_vm_project_02_quality_gate:
             --MAGs_max_contamination2 {params.MAGs_max_contamination2} \
             --out_MAGs_tax_detail {output.m_filter} > {log} 2>&1
         Rscript {Dir_script_metalink}/MAGs_v_quality_filter.cmd.R \
-            --in_vMAGs_tax_detail {input.v_tax} \
+            --in_vMAGs_tax_detail {params.v_tax_tsv} \
             --checkv_quality {params.checkv_quality} \
             --out_vMAGs_tax_detail {output.v_filter} >> {log} 2>&1
 
         # sequence-level gated genome lists drive the reference chain; rewrite
         # them (and the gated dir/fna) only when the genome set actually changed,
-        # so taxonomy-only reruns do not retrigger masking/indexing/mapping
-        awk -F'\t' 'NR>1{{print $1}}' {output.m_filter} | sort -u > {params.m_genome_list}.tmp 2>> {log}
-        if [ ! -f {params.m_genome_list} ]; then _gate_reason="m_genome_list missing";
-        elif ! cmp -s {params.m_genome_list}.tmp {params.m_genome_list}; then _gate_reason="mMAG set changed";
+        # so taxonomy-only reruns do not retrigger masking/indexing/mapping.
+        # The .list/.gated.fna are declared outputs and are wiped before every
+        # rerun of this rule; the non-declared .shadow copies survive and carry
+        # the timestamp of the last genuine set change.
+        awk -F'\t' 'NR==1{{c=0; for(i=1;i<=NF;i++) if($i=="dRep_95_representative") c=i; next}} {{if(c==0) print $1; else if($c!="CheckM_filter" && $c!="") print $c}}' {output.m_filter} | sort -u > {output.m_genome_list}.tmp 2>> {log}
+        if [ ! -f {output.m_genome_list}.shadow ]; then _gate_reason="m shadow missing (first run or legacy workdir)";
+        elif ! cmp -s {output.m_genome_list}.tmp {output.m_genome_list}.shadow; then _gate_reason="mMAG set changed";
         else _gate_reason=""; fi
         if [ -n "$_gate_reason" ]; then
             echo "[INFO] rewrite gated mMAG list: ${{_gate_reason}}" >> {log}
-            mv {params.m_genome_list}.tmp {params.m_genome_list}
+            mv {output.m_genome_list}.tmp {output.m_genome_list}
+            cp -p {output.m_genome_list} {output.m_genome_list}.shadow
         else
-            echo "[INFO] gated mMAG set unchanged; keep existing {params.m_genome_list}" >> {log}
-            rm -f {params.m_genome_list}.tmp
+            echo "[INFO] gated mMAG set unchanged; restore {output.m_genome_list} with the timestamp of the last genuine change" >> {log}
+            mv {output.m_genome_list}.tmp {output.m_genome_list}
+            touch -r {output.m_genome_list}.shadow {output.m_genome_list}
         fi
 
-        awk -F'\t' 'NR>1{{print $1}}' {output.v_filter} | sort -u > {params.v_genome_list}.tmp 2>> {log}
+        awk -F'\t' 'NR>1{{print $1}}' {output.v_filter} | sort -u > {output.v_genome_list}.tmp 2>> {log}
         if [ ! -d {params.gated_dir} ]; then _gate_reason="gated_dir missing";
-        elif [ ! -f {params.gated_fna} ]; then _gate_reason="gated_fna missing";
-        elif [ ! -f {params.v_genome_list} ]; then _gate_reason="v_genome_list missing";
-        elif ! cmp -s {params.v_genome_list}.tmp {params.v_genome_list}; then _gate_reason="vMAG set changed";
+        elif [ ! -f {output.v_genome_list}.shadow ]; then _gate_reason="v shadow missing (first run or legacy workdir)";
+        elif ! cmp -s {output.v_genome_list}.tmp {output.v_genome_list}.shadow; then _gate_reason="vMAG set changed";
         else _gate_reason=""; fi
         if [ -n "$_gate_reason" ]; then
             echo "[INFO] rewrite gated vMAGs: ${{_gate_reason}}" >> {log}
-            mv {params.v_genome_list}.tmp {params.v_genome_list}
+            mv {output.v_genome_list}.tmp {output.v_genome_list}
+            cp -p {output.v_genome_list} {output.v_genome_list}.shadow
             mkdir -p {params.gated_dir} 2>> {log}
             rm -f {params.gated_dir}/*.fna 2>> {log}
-            > {params.gated_fna}.tmp
+            > {output.gated_fna}.tmp
             while read g; do
                 for f in {params.vclust_dir}/"$g".fna; do
                     [ -e "$f" ] || continue
                     ln -sf "$f" {params.gated_dir}/"$g".fna
-                    cat "$f" >> {params.gated_fna}.tmp
+                    cat "$f" >> {output.gated_fna}.tmp
                 done
-            done < {params.v_genome_list}
-            mv {params.gated_fna}.tmp {params.gated_fna}
+            done < {output.v_genome_list}
+            mv {output.gated_fna}.tmp {output.gated_fna}
         else
-            echo "[INFO] gated vMAG set unchanged; keep existing {params.v_genome_list}, {params.gated_dir} and {params.gated_fna}" >> {log}
-            rm -f {params.v_genome_list}.tmp
+            echo "[INFO] gated vMAG set unchanged; restore {output.v_genome_list} and {output.gated_fna} with the timestamp of the last genuine change" >> {log}
+            mv {output.v_genome_list}.tmp {output.v_genome_list}
+            # gated_fna is a declared output and was wiped before this rerun;
+            # rebuild it from the (non-declared) gated dir in list order
+            > {output.gated_fna}.tmp
+            while read g; do
+                f={params.gated_dir}/"$g".fna
+                [ -e "$f" ] && cat "$f" >> {output.gated_fna}.tmp
+            done < {output.v_genome_list}
+            mv {output.gated_fna}.tmp {output.gated_fna}
+            touch -r {output.v_genome_list}.shadow {output.v_genome_list} {output.gated_fna}
         fi
         touch {output.mk}
         """
@@ -193,8 +197,8 @@ rule pmr_vm_project_02_quality_gate:
 rule pmr_vm_project_02_mask_viral:
     input:
         mk_m = path + 'markers/m-project/01_drep_project_95/{project}.mk',
-        m_gated_list = lambda wildcards: pmr_vm_gated_input(wildcards, 'mMAGs_gated.list'),
-        v_gated_list = lambda wildcards: pmr_vm_gated_input(wildcards, 'vMAGs_gated.list'),
+        m_gated_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAGs_gated.list',
+        v_gated_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_gated.list',
         mk_v10 = expand(path + 'markers/v-sample/10_summary/{sample}.mk', sample=SAMPLE_INDEX),
         orf_loci = expand(path + 'results/b-sample/08_gather_bin_high_quality/bin_ORF_loci/{sample}', sample=SAMPLE_INDEX),
     output:
@@ -237,7 +241,7 @@ rule pmr_vm_project_02_mask_viral:
 rule pmr_vm_project_03_build_ref:
     input:
         mk_mask = path + 'markers/pmr_vm-project/02_quality_gate/{project}.mask_viral.mk',
-        vMAGs_vclust = lambda wildcards: pmr_vm_gated_input(wildcards, 'vMAGs_vclust.gated.fna'),
+        vMAGs_vclust = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_vclust.gated.fna',
     output:
         mMAGs_vMAGs = path + 'results/pmr_vm-project/03_index/{project}.mMAGs_vMAGs.fna',
         genomes_dir = directory(path + 'results/pmr_vm-project/03_index/{project}.mMAGs_vMAGs_genomes'),
@@ -246,7 +250,6 @@ rule pmr_vm_project_03_build_ref:
         # mMAGs with viral regions masked (N) and fully-viral contigs dropped
         MAGs_folder = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAGs_masked_genomes/',
         vMAGs_folder = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_gated/',
-        gated_fna = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_vclust.gated.fna',
     conda: config["conda_envs"]["metalink-main"]
     priority: 1
     threads: 1
@@ -265,7 +268,7 @@ rule pmr_vm_project_03_build_ref:
         # and the per-genome link directory would silently collide.
         find -L {params.MAGs_folder} -maxdepth 1 -type f \\( -name '*.fa' -o -name '*.fna' \\) -print0 2>/dev/null \
             | xargs -0 -r cat 2>/dev/null | grep '^>' | awk '{{print $1}}' | sed 's/^>//' | sort -u > {output.genomes_dir}/.mMAG.seqids || true
-        grep '^>' {params.gated_fna} 2>/dev/null | awk '{{print $1}}' | sed 's/^>//' | sort -u > {output.genomes_dir}/.vMAG.seqids || true
+        grep '^>' {input.vMAGs_vclust} 2>/dev/null | awk '{{print $1}}' | sed 's/^>//' | sort -u > {output.genomes_dir}/.vMAG.seqids || true
         comm -12 {output.genomes_dir}/.mMAG.seqids {output.genomes_dir}/.vMAG.seqids > {output.genomes_dir}/.conflict.seqids
 
         find -L {params.MAGs_folder} -maxdepth 1 -type f \\( -name '*.fa' -o -name '*.fna' \\) -printf '%f\\n' 2>/dev/null \
@@ -302,7 +305,7 @@ rule pmr_vm_project_03_build_ref:
         # merged reference: mMAGs (dRep project 95) + vMAGs (vclust representatives)
         find -L {params.MAGs_folder} -maxdepth 1 -type f \\( -name '*.fa' -o -name '*.fna' \\) -print0 2>/dev/null \
             | xargs -0 -r cat > {output.mMAGs_vMAGs} 2>> {log}
-        cat {params.gated_fna} >> {output.mMAGs_vMAGs} 2>> {log}
+        cat {input.vMAGs_vclust} >> {output.mMAGs_vMAGs} 2>> {log}
 
         if [ ! -s {output.mMAGs_vMAGs} ]; then
             echo "ERROR: merged reference is empty for {wildcards.project}; no mMAGs and no vMAGs found." >> {log}
@@ -1359,6 +1362,7 @@ rule pmr_vm_sample_12_delete_bam:
     input:
         out_coverm = path + 'results/pmr_vm-sample/03_coverm_MAGs/{project}/{sample}.tsv',
         out_coverm_contigs = path + 'results/pmr_vm-sample/03_coverm_contigs/{project}/{sample}.tsv',
+        bam_stats = path + 'results/pmr_vm-sample/04_bam_summary/{project}/{sample}.bam_stats.tsv',
     output:
         mk = path + 'markers/pmr_vm-sample/12_delete_bam/{project}/{sample}.mk'
     threads: 1
@@ -1373,4 +1377,47 @@ rule pmr_vm_sample_12_delete_bam:
         """
         if [ -e "{params.bam}" ];then rm -r {params.bam}*;else echo Folder merged.bam not exist.;fi > {log} 2>&1
         touch {output.mk}
+        """
+
+
+rule pmr_vm_sample_04_bam_summary:
+    """Per-sample flagstat of the project-reference mapping BAM."""
+    input:
+        mk = pmr_vm_get_03_mapping_rule_mk,
+        bam = path + 'results/pmr_vm-sample/03_mapping/' + pmr_vm_sample_mapping_method + '/{project}/{sample}.bam',
+    output:
+        path + 'results/pmr_vm-sample/04_bam_summary/{project}/{sample}.bam_stats.tsv',
+    threads: 1
+    conda: config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/pmr_vm-sample/04_bam_summary/{project}/{sample}.bam_summary.log'
+    benchmark:
+        path + 'benchmarks/pmr_vm-sample/04_bam_summary/{project}/{sample}.bam_summary.benchmark'
+    shell:
+        """
+        samtools flagstat {input.bam} > {output} 2> {log}
+        """
+
+rule pmr_vm_project_04_bam_summary:
+    """Aggregate per-sample flagstat files into a project-level mapping
+    summary table and figure."""
+    input:
+        expand(path + 'results/pmr_vm-sample/04_bam_summary/{project}/{sample}.bam_stats.tsv', project=PROJECT_INDEX, sample=SAMPLE_INDEX),
+    output:
+        tsv = path + 'results/pmr_vm-project/04_bam_summary/{project}.bam_mapping_summary.tsv',
+        pdf = path + 'results/pmr_vm-project/04_bam_summary/{project}.bam_mapping_summary.pdf',
+    params:
+        in_dir = path + 'results/pmr_vm-sample/04_bam_summary/{project}/',
+    threads: 1
+    conda: config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/pmr_vm-project/04_bam_summary/{project}.bam_summary.log'
+    benchmark:
+        path + 'benchmarks/pmr_vm-project/04_bam_summary/{project}.bam_summary.benchmark'
+    shell:
+        """
+        Rscript {Dir_script_metalink}/summarize_bam_flagstat.cmd.R \
+            --input_dir {params.in_dir} \
+            --out_tsv {output.tsv} \
+            --out_pdf {output.pdf} > {log} 2>&1
         """

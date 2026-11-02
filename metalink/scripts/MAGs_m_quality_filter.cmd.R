@@ -101,6 +101,19 @@ MAG_tax_detail <- MAG_tax_detail %>%
          Completeness2 >= MAGs_min_completeness2,
          Contamination2 <= MAGs_max_contamination2)
 
+# MAGs marked "CheckM_filter" have no dRep assignment (excluded from the dRep
+# input upstream); they can never be found in the dereplicated reference, so
+# exclude them from the gate as well.
+if ("dRep_95_representative" %in% colnames(MAG_tax_detail)) {
+  n_checkm_filter <- sum(!is.na(MAG_tax_detail$dRep_95_representative) &
+                         MAG_tax_detail$dRep_95_representative == "CheckM_filter")
+  if (n_checkm_filter > 0) {
+    cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Excluding',n_checkm_filter,'MAG(s) marked CheckM_filter (no dRep assignment; they are absent from the dereplicated reference)','\n')
+    MAG_tax_detail <- MAG_tax_detail %>%
+      filter(is.na(dRep_95_representative) | dRep_95_representative != "CheckM_filter")
+  }
+}
+
 if (nrow(MAG_tax_detail) > 0) {
   cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'MAGs after quality filtering:',nrow(MAG_tax_detail), '\n')
   MAG_tax_detail %>%

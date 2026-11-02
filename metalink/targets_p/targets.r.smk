@@ -10,7 +10,7 @@ rule r_end_target:
         s_trim_merge_2 = expand(path + 'results/r-sample/02_FragGeneScanRs/{sample}_both_merge_unmerge.ffn.gz',sample=SAMPLE_INDEX) if TARGET_STAGE in ["function", "taxonomy_and_function", "all"] else [],
         s_ffn_length = expand(path + 'results/r-sample/02_FragGeneScanRs/{sample}_both_merge_unmerge.ffn_length.gz',sample=SAMPLE_INDEX) if TARGET_STAGE in ["function", "taxonomy_and_function", "all"] else [],
         s_ffn_len  = expand(path + 'results/r-sample/02_FragGeneScanRs_stats/{sample}_both_merge_unmerge.fna.stats',sample=SAMPLE_INDEX) if TARGET_STAGE in ["function", "taxonomy_and_function", "all"] else [],
-        s_bracken_kraken = expand(path + 'results/r-sample/03_taxonomy/bracken/{sample}.bracken_kraken.report.tsv',sample=SAMPLE_INDEX) if TARGET_STAGE in ["taxonomy", "function", "taxonomy_and_function", "all"] else [],
+        s_bracken_kraken = expand(path + 'results/r-sample/03_taxonomy/bracken/{sample}.bracken_kraken.report.tsv',sample=SAMPLE_INDEX) if TARGET_STAGE in ["taxonomy", "taxonomy_and_function", "all"] else [],
         s_reads_fun_mk = expand(path + 'markers/r-sample/04_function/classify_done/{sample}.mk',sample=SAMPLE_INDEX) if TARGET_STAGE in ["function", "taxonomy_and_function", "all"] else [],
         s_merge_05 = expand(path + 'results/r-sample/05_merge_tax_fun_depth/KO_Taxa_RelativeAbundance/{sample}.KO_Taxa_RelativeAbundance.Taxa.tsv', sample=SAMPLE_INDEX) if TARGET_STAGE == "all" else [],
         s_mc_05 = expand(path + 'markers/r-sample/05_visualize/{sample}.mk', sample=SAMPLE_INDEX) if TARGET_STAGE == "all" else [],

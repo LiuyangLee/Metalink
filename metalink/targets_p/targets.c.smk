@@ -4,6 +4,7 @@ rule c_end_target:
         p_mk_12 =  expand(path + 'results/b-project/02_cat_trimmed_stats/{project}/02_clean_reads_stats.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
         p_mk_13 =  expand(path + 'markers/b-project/03_contigs_stats/{project}/03_contigs_stats.mk', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
         p_mk_14 =  expand(path + 'results/b-project/04_merge_reads_contigs_stats/{project}/04_reads_contigs_ffn_stats.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
+        p_bam_summary = expand(path + 'results/b-project/04_bam_summary/{project}.bam_mapping_summary.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
         s_mk_02 = expand(path + 'markers/c-sample/01_taxonomy/classify_done/{sample}.mk', sample=SAMPLE_INDEX),
         s_eg_03 = expand(path + 'markers/c-sample/02_function/classify_done/{sample}.mk', sample=SAMPLE_INDEX),
         s_merge_05 = expand(path + 'results/c-sample/05_merge_tax_fun_depth/KO_Taxa_RelativeAbundance/{sample}.KO_Taxa_RelativeAbundance.Taxa.tsv', sample=SAMPLE_INDEX),

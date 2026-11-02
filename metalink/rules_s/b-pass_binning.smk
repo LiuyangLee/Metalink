@@ -92,6 +92,8 @@ rule b_sample_08_gather_bin_checkm_stats:
             python {Dir_script_metalink}/gather_bins_checkm.no_add_name.py {params.sample} "$STATS" {params.input_bin_dir} {params.bin_high_quality} {params.bin_high_quality_renamed} {output.tsv} {params.min_completeness} {params.max_contamination} {params.min_quality_score} >> {log} 2>&1
         else
             echo "File $STATS not exist" >&2
+            mkdir -p {params.bin_high_quality}
+            mkdir -p {params.bin_high_quality_renamed}
             touch {output.tsv}
         fi >> {log} 2>&1
         """
@@ -177,4 +179,29 @@ rule b_project_05_gather_project_bin_checkm_stats:
             tail -n +2 "$f" >> {output.checkM}
         done 2>>{log}
         touch {output.mk}
+        """
+
+
+rule b_project_08_MAG_quality_summary:
+    """Aggregate per-sample CheckM stats into a project-level MAG quality table
+    and a completeness-vs-contamination figure (MIMAG tiers)."""
+    input:
+        expand(path + 'results/b-sample/08_gather_bin_high_quality/checkm_stats/{sample}.csv', sample=SAMPLE_INDEX),
+    output:
+        tsv = path + 'results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.tsv',
+        pdf = path + 'results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.pdf',
+    params:
+        in_dir = path + 'results/b-sample/08_gather_bin_high_quality/checkm_stats/',
+    threads: 1
+    conda: config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.log'
+    benchmark:
+        path + 'benchmarks/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.benchmark'
+    shell:
+        """
+        Rscript {Dir_script_metalink}/summarize_MAG_quality.cmd.R \
+            --input_dir {params.in_dir} \
+            --out_tsv {output.tsv} \
+            --out_pdf {output.pdf} > {log} 2>&1
         """

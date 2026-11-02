@@ -7686,7 +7686,7 @@ common_options = [
                 '   mMAG_dir:      mMAGs FASTA (*.fa) files.\n'
                 'Constraints:\n'
                 '   Each mMAG file must end with .fa suffix.\n'
-                '   Internal sequence headers of mMAGs must be original contig IDs exactly matching those in contig_file.\n'
+                '   Internal sequence headers of mMAGs must be original contig IDs exactly matching those in contig_file (not required in pmr mode, where mMAG abundance is computed by mapping reads directly to the project-level mMAG reference; but contig IDs must still be unique across the genomes within one mMAG_dir, since the genomes are concatenated into a single mapping reference).\n'
                 '   All files must not contain three consecutive dashes (---) as they are reserved as internal delimiters.\n'
                 'Mutually exclusive with -c/--configfile.'
                 ),

@@ -4,8 +4,6 @@
 
 > **Metalink**: Joint taxonomic and functional profiling of metagenomes and metatranscriptomes across resolution scales.
 
-🔙 **Back to the [project overview](README.md).**
-
 ## Overview
 
 Metalink implements an integrated strategy that functionally and taxonomically profiles metagenomic and metatranscriptomic sequencing. The key features include:
@@ -164,8 +162,8 @@ The fastest way to get the Metalink CLI:
 
 ```bash
 # 1. Create a Python environment
-conda create -n metalink-0.3.8
-conda activate metalink-0.3.8
+conda create -n metalink-0.3.9
+conda activate metalink-0.3.9
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 2. Install Metalink from PyPI
@@ -196,8 +194,8 @@ git clone https://github.com/LiuyangLee/Metalink.git
 cd Metalink
 
 # 2. Create a Python environment for the Metalink CLI
-conda create -n metalink-0.3.8
-conda activate metalink-0.3.8
+conda create -n metalink-0.3.9
+conda activate metalink-0.3.9
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 3. Install Metalink in editable mode
@@ -209,8 +207,8 @@ pip install -e .
 #### Option 3: Bioconda Installation
 
 ```bash
-conda create -n metalink-0.3.8
-conda activate metalink-0.3.8
+conda create -n metalink-0.3.9
+conda activate metalink-0.3.9
 mamba install -c bioconda metalink
 ```
 
@@ -221,7 +219,7 @@ mamba install -c bioconda metalink
 #### Verify installation
 
 ```bash
-conda activate metalink-0.3.8
+conda activate metalink-0.3.9
 metalink --help
 metalink b --help
 ```
@@ -477,6 +475,9 @@ The files defining Metalink's custom taxonomies are inside the downloaded kraken
     | VIBRANT DB | v1.2.1 | ~8.0 GB | — |
     | iPHoP DB | Jun_2025_pub_rw | ~294 GB | — |
 
+    > [!NOTE]
+    > The reduced kraken2 variants (`kraken2_16GB` / `64GB` / `256GB`) are built with `kraken2-build --max-db-size`, so their coverage is lower than that of the full database (`kraken2_raw`).
+
 2. You can manually edit `out_dir/config/config.<mode>.yaml` so that all `Directory.database.*` paths point to your DBDIR.
 
 #### Manual download of Metalink-built databases
@@ -512,7 +513,7 @@ aria2c -c \
 #    First do a dry run (-n; -p prints the shell commands): the job list must
 #    contain ONLY setup_kraken2_function. If download_kraken2_function appears,
 #    the archive is not at the expected path — fix that before the real run.
-conda activate metalink-0.3.8
+conda activate metalink-0.3.9
 metalink download-database -d db_dir --databases kraken2_function --kraken2-function-db-size kraken2_16GB -pn # dry run
 metalink download-database -d db_dir --databases kraken2_function --kraken2-function-db-size kraken2_16GB
 ```
@@ -581,9 +582,9 @@ For single-end or long-read samples, use a `read_s` column instead of `read_1`/`
 > [!IMPORTANT]
 >- Supports `.fastq.gz` and `.fq.gz` extensions.
 >- The input TSV is validated when the workflow starts: it must be tab-separated, contain a `sample` column plus the columns required by your read type and skip-level (`read_1`/`read_2` for paired, `read_s` for single-end/long reads, `contig_file` for skip-level ≥ 2, `mMAG_dir` for skip-level ≥ 3), and required columns must not be empty. Malformed files are rejected with the exact line number and reason.
->- All FASTA files (contigs, MAGs) must **not** contain `---` in headers (used as internal delimiter).
+>- Sample names, and headers of all FASTA files (contigs, MAGs), must **not** contain `---` (reserved as the internal `sample---contig` / `genome---ORF` delimiter); Metalink automatically checks this when the workflow starts and rejects violations with the exact file and header.
 >- MAG directories should contain `.fa` files.
->- The contig IDs must match between MAG files and the contigs file.
+>- The contig IDs must match between MAG files and the contigs file — except in `pmr` (see [Custom mMAG collections in pmr](#advanced-skip-level-use-cases)), where only uniqueness within/across directories is required: duplicate contig IDs across genomes in one `mMAG_dir` are rejected at startup (in `pmr`, the check extends across all `mMAG_dir`s of the project).
 
 ---
 
@@ -732,6 +733,20 @@ Metalink is designed around **analysis goals** rather than individual parameters
 
 Metalink modes form a progressive hierarchy. Because the workflow is built on Snakemake, **you do not need to run the base mode first**: starting from any mode (e.g. `mcr` or `vmcr`) will automatically build the full dependency graph and execute all required upstream steps (`b`, assembly, mapping, binning, etc.) in the same working directory (`-w`). Completed steps are cached, so you can also run modes sequentially into the same directory if you prefer to inspect intermediate results.
 
+#### Mapping rate as a guide for mode selection
+
+Each run produces a project-level mapping summary (one row per sample) and a summary figure:
+
+- `b` mode: `results/b-project/04_bam_summary/{project}.bam_mapping_summary.tsv` / `.pdf`
+- `pmr --mags m` / `v` / `vm`: `results/pmr_{m,v,vm}-project/04_bam_summary/{project}.bam_mapping_summary.tsv` / `.pdf`
+
+If you are not yet familiar with your data, the `mapping_rate` column offers a suggested reference (not a strict rule) for how to continue:
+
+- **Mapping rate ≥ 95%**: most reads are assembled into contigs — contig-based modes (`c`, `mc`, `vc`) already give an accurate community profile.
+- **Mapping rate < 80%, especially < 50%**: a substantial fraction of reads never made it into assemblies. Use read-inclusive integrated modes (`cr`, `vcr`, `mcr`, `vmcr`) so the unassembled fraction is still profiled at read level.
+
+The summary PDF shows the sorted per-sample mapping-rate curve and the number of samples in the `<50 / 50–80 / 80–95 / ≥95` bins, so you can judge at a glance how many samples meet the threshold.
+
 #### Progressive Workflow (Optional)
 
 **Microbial analysis paths**
@@ -878,12 +893,18 @@ Metalink's built-in assembler and binner combinations cover the most common scen
 |----------|-----------|------------------|---------------|-------------------|
 | **Hybrid assembly** (2nd-gen + 3rd-gen mixed) | `2` | Pre-assembled contigs (from external hybrid assembler) + clean reads (paired or long reads) | Any (`c`, `m`, `mc`, `mcr`, etc.) | Skips trimming and assembly; runs mapping, binning, annotation, and MAGs/contigs/reads taxonomy/function annotation and project-level aggregation |
 | **Long-read binning** | `3` | Pre-binned MAGs (from external binner) + contigs (from external assembler) + clean reads | Any (`m`, `mc`, `mcr`, etc.) | Skips trimming, assembly, and binning; runs MAGs/contigs/reads taxonomy/function annotation and project-level aggregation |
-| **Metatranscriptome read mapping to MAGs** | `3` | Pre-binned MAGs (from external binner) + metatranscriptome reads | `pmr` | Skips trimming, assembly, and binning; maps reads to provided MAGs and performs project-level MAG + read analysis |
+| **Metatranscriptome read mapping to MAGs** | `3` | Pre-binned mMAGs (from external binner) + metatranscriptome reads | `pmr` | Skips trimming, assembly, and binning; maps reads to provided mMAGs and performs project-level MAG + read analysis |
+| **External/custom mMAG collections across samples** | `3` | Reads + contigs + custom mMAG directory (shared or per-sample) | `pmr --mags m`/`vm` | Analyzes a user-supplied mMAG collection across all samples (see below) |
+
+**Custom mMAG collections in `pmr` (`--mags m`/`vm`)**: unlike the other MAG modes, where each sample's `mMAG_dir` should hold mMAGs binned from that sample, `pmr` allows mMAGs from **any source** — e.g. a reference genome collection or a mixed set of mMAGs — placed in one or several directories, even shared by all samples. mMAG abundance in `pmr` comes from mapping reads directly against the project-level mMAG reference, so mMAG contigs do **not** need to originate from the corresponding sample's contigs. The only constraint: **contig IDs must be unique across the mMAGs within one directory** (duplicate IDs would collide when the genomes are concatenated into the mapping reference). The mMAGs are still quality-controlled (CheckM/CheckM2) and dereplicated (dRep ANI 95%, project-level) before analysis, so a collection shared across samples is analyzed as one consistent genome set.
+
+> [!Note]
+> - This flexibility applies to **mMAGs only**. vMAGs are always produced by Metalink's own viral identification chain (geNomad/VirSorter2/VIBRANT → CheckV → vRhyme → vClust) and cannot be supplied externally on the current version.
 
 > [!TIP]
 > - For hybrid assembly, generate contigs with your preferred tool, then supply them in the TSV's `contig_file` column and run with `--skip-level 2`.
 > - For metatranscriptomes, rRNA should be removed.
-> - For `--skip-level 3`, place each sample's MAG directory (with existing MAGs) in the `mMAG_dir` column of the TSV.
+> - For `--skip-level 3`, place each sample's MAG directory (with existing MAGs) in the `mMAG_dir` column of the TSV. (Exception: in `pmr` `--mags m`/`vm` this may instead be a custom mMAG collection from any source — see the paragraph above.)
 
 
 **Skip-level 1 example** (pre-trimmed reads):
@@ -1509,7 +1530,11 @@ results/b-project/
 ├── 02_cat_trimmed_stats/{project}/02_clean_reads_stats.tsv
 ├── 03_contigs_stats/{project}/03_contigs_stats.tsv
 ├── 04_merge_reads_contigs_stats/{project}/04_reads_contigs_ffn_stats.tsv
-└── 05_gather_project_bin_checkm_stats/{project}/05_checkm_high_quality_bins.csv
+├── 05_gather_project_bin_checkm_stats/{project}/05_checkm_high_quality_bins.csv
+├── 04_bam_summary/{project}.bam_mapping_summary.tsv   # per-sample mapping stats (one row per sample, all flagstat metrics)
+└── 04_bam_summary/{project}.bam_mapping_summary.pdf   # sorted mapping-rate curve + per-bin sample counts
+├── 08_MAG_quality_summary/{project}.MAG_quality_summary.tsv
+└── 08_MAG_quality_summary/{project}.MAG_quality_summary.pdf   # completeness vs. contamination + marginal histograms
 ```
 
 #### MAG modes (`m`, `vm`) project summaries
@@ -1535,6 +1560,41 @@ results/v-project/
 ├── 10_summary/                        # Project-level vMAG summary
 └── 11_visualization/                  # Project-level plots
 ```
+
+#### pmr mode (`--mags m` / `v` / `vm`) layouts
+
+Sample level (`results/pmr_{m,v,vm}-sample/`; per sample):
+
+```
+results/pmr_{m,v,vm}-sample/
+├── 03_mapping/{method}/{project}/       # Sorted BAMs of reads mapped to the project MAG reference
+├── 03_coverm_MAGs/{project}/            # Per-sample MAG coverage (CoverM trimmed mean)
+├── 03_coverm_contigs/{project}/         # Per-sample contig coverage
+├── 04_bam_summary/{project}/            # Per-sample mapping stats ({sample}.bam_stats.tsv)
+├── 05_merge_tax_fun_depth/{project}/    # Joint taxonomy-function-depth tables (KO_depth/, Taxa_abundance/, KO_Taxa_*/)
+├── 05_visualization/{project}/          # Sample-level summary barplots
+└── 06_module_completeness/{project}/    # Sample-level module completeness (mclink)
+```
+
+Project level (`results/pmr_{m,v,vm}-project/`):
+
+```
+results/pmr_{m,v,vm}-project/
+├── 01_Taxa_Sample/{project}/            # Cross-sample taxonomy tables (long/wide)
+├── 01_Taxa_visualization/{project}/     # Taxonomy barplots
+├── 02_KO_Sample/{project}/              # Cross-sample KO tables (long/wide)
+├── 02_quality_gate/                     # Gated MAG sets (mMAGs_gated/, vMAGs_gated/, mMAGs_masked_genomes/) and audit files
+├── 03_index/{method}/                   # Reference index of the gated MAG set
+├── 03_community_module/{project}/       # Community-level module completeness (mclink sample mode)
+├── 03_Fun_visualization/{project}/      # Function/module barplots
+├── 04_summary/{project}/                # Species abundance matrix (mMAG_ / vMAG_ / mMAG_vMAG_species_abundance_matrix.tsv)
+├── 04_bam_summary/{project}.bam_mapping_summary.tsv / .pdf   # Project mapping summary (table + figure)
+├── 05_merge_tax_KO_depth/{project}/     # Cross-sample KO-depth merges per rank
+├── 05_merge_tax_Module_*/{project}/     # Cross-sample module merges (RelativeAbundance / SumCoverage)
+├── 06_module_completeness/{project}/    # Project-level module completeness per rank
+```
+
+Key per-`--mags` differences: the reference genome set (`m`: dRep ANI-95 mMAGs; `v`: vClust vMAG representatives; `vm`: combined, provirus-masked), and the summary matrix name in `04_summary/` (`mMAG_` / `vMAG_` / `mMAG_vMAG_species_abundance_matrix.tsv`).
 
 
 #### Taxonomy and Function Outputs
@@ -1578,6 +1638,14 @@ results/{mode}-project/
 ├── 05_merge_tax_Module_RelativeAbundance/{project}/   # Module × taxon matrices (RA scale)
 ├── 05_merge_tax_Module_SumCoverage/{project}/     # Module × taxon matrices (coverage scale)
 └── 06_module_completeness/{project}/{rank}/       # Taxon-level module tables (see below)
+```
+
+
+The mapping summary is also produced by `pmr --mags m`/`v`/`vm`, which additionally run a per-sample flagstat step:
+
+```
+results/pmr_{m,v,vm}-sample/04_bam_summary/{project}/{sample}.bam_stats.tsv   # per-sample flagstat of the project-reference BAM
+results/pmr_{m,v,vm}-project/04_bam_summary/{project}.bam_mapping_summary.tsv / .pdf
 ```
 
 ##### Long-format table columns

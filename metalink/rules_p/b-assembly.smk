@@ -677,3 +677,28 @@ merge_and_save("{output.reads}", "{params.ctg_tsv}", "{output.reads_contigs}")
 merge_and_save("{output.reads_contigs}", "{params.ctg_ffn}", "{output.reads_contigs_ffn}")
 ' > {log} 2>&1
         """
+
+
+rule b_project_04_bam_summary:
+    """Aggregate per-sample contigs BAM flagstat files into a project-level
+    mapping summary table and figure."""
+    input:
+        expand(path + 'results/b-sample/04_bam_summary/{sample}.contigs_bam_stats.tsv', sample=SAMPLE_INDEX),
+    output:
+        tsv = path + 'results/b-project/04_bam_summary/{project}.bam_mapping_summary.tsv',
+        pdf = path + 'results/b-project/04_bam_summary/{project}.bam_mapping_summary.pdf',
+    params:
+        in_dir = path + 'results/b-sample/04_bam_summary/',
+    threads: 1
+    conda: config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/b-project/04_bam_summary/{project}.bam_summary.log'
+    benchmark:
+        path + 'benchmarks/b-project/04_bam_summary/{project}.bam_summary.benchmark'
+    shell:
+        """
+        Rscript {Dir_script_metalink}/summarize_bam_flagstat.cmd.R \
+            --input_dir {params.in_dir} \
+            --out_tsv {output.tsv} \
+            --out_pdf {output.pdf} > {log} 2>&1
+        """

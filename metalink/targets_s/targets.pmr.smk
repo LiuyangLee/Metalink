@@ -28,6 +28,8 @@ rule pmr_end_target:
         p_out_long_mc = expand(path + 'results/pmr_m-project/05_merge_tax_KO_depth/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'm' else [],
         p_out_long_Module_RelativeAbundance = expand(path + 'results/pmr_m-project/05_merge_tax_Module_RelativeAbundance/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'm' else [],
         p_out_long_Module_SumCoverage = expand(path + 'results/pmr_m-project/05_merge_tax_Module_SumCoverage/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'm' else [],
+        p_bam_summary = expand(path + 'results/pmr_m-project/04_bam_summary/{project}.bam_mapping_summary.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'm' else [],
+        p_mag_quality = expand(path + 'results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'm' else [],
         # ---- v chain (--mags v): pmr_v-sample / pmr_v-project products ----
         v_cm_03 = expand(path + 'results/pmr_v-sample/03_coverm_MAGs/{project}/{sample}.tsv', project=PROJECT_INDEX, sample=SAMPLE_INDEX) if _MAGS == 'v' else [],
         v_03_coverm_contigs = expand(path + 'results/pmr_v-sample/03_coverm_contigs/{project}/{sample}.tsv', project=PROJECT_INDEX, sample=SAMPLE_INDEX) if _MAGS == 'v' else [],
@@ -44,6 +46,7 @@ rule pmr_end_target:
         v_out_long_mc = expand(path + 'results/pmr_v-project/05_merge_tax_KO_depth/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'v' else [],
         v_out_long_Module_RelativeAbundance = expand(path + 'results/pmr_v-project/05_merge_tax_Module_RelativeAbundance/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'v' else [],
         v_out_long_Module_SumCoverage = expand(path + 'results/pmr_v-project/05_merge_tax_Module_SumCoverage/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'v' else [],
+        v_bam_summary = expand(path + 'results/pmr_v-project/04_bam_summary/{project}.bam_mapping_summary.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'v' else [],
         # ---- vm chain (--mags vm): pmr_vm-sample / pmr_vm-project products ----
         vm_species_table = expand(path + 'results/pmr_vm-project/04_summary/{project}/mMAG_vMAG_species_abundance_matrix.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'vm' else [],
         vm_03_coverm_contigs = expand(path + 'results/pmr_vm-sample/03_coverm_contigs/{project}/{sample}.tsv', project=PROJECT_INDEX, sample=SAMPLE_INDEX) if _MAGS == 'vm' else [],
@@ -59,6 +62,8 @@ rule pmr_end_target:
         vm_out_long_mc = expand(path + 'results/pmr_vm-project/05_merge_tax_KO_depth/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'vm' else [],
         vm_out_long_Module_RelativeAbundance = expand(path + 'results/pmr_vm-project/05_merge_tax_Module_RelativeAbundance/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'vm' else [],
         vm_out_long_Module_SumCoverage = expand(path + 'results/pmr_vm-project/05_merge_tax_Module_SumCoverage/{project}/{rank}.mean.long.tsv',rank=RANKS, project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'vm' else [],
+        vm_bam_summary = expand(path + 'results/pmr_vm-project/04_bam_summary/{project}.bam_mapping_summary.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'vm' else [],
+        vm_mag_quality = expand(path + 'results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS == 'vm' else [],
         # ---- v-p products (--mags v/vm): pure project-level vMAG chain ----
         p_vc_01 = expand(path + 'results/v-project/06_vclust/{project}/clusters.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS in ('v', 'vm') else [],
         p_vp_iphop = expand(path + 'markers/v-project/07_iPHoP/done/{project}.mk', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL and _MAGS in ('v', 'vm') else [],

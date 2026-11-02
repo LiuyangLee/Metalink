@@ -53,25 +53,13 @@ def _pmr_m_get_mk(wildcards, rule_type):
 
 pmr_m_get_03_mapping_rule_mk = lambda wc: _pmr_m_get_mk(wc, "mapping")
 
-
-
-def pmr_m_gated_input(wildcards, artifact):
-    # The gated genome artifacts are content-managed side effects of the quality
-    # gate. They are deliberately NOT declared outputs: Snakemake wipes declared
-    # outputs before every rerun (prepare() -> remove_existing_output()), which
-    # would defeat the gate's write-if-changed logic. Depend on the artifact once
-    # it exists; on a fresh DAG fall back to the gate marker for ordering.
-    f = path + 'results/pmr_m-project/02_quality_gate/{project}.{artifact}'.format(project=wildcards.project, artifact=artifact)
-    if os.path.exists(f):
-        return f
-    return path + 'markers/pmr_m-project/02_quality_gate/{project}.mk'.format(project=wildcards.project)
-
 rule pmr_m_project_02_quality_gate:
     input:
         m_tax = path + 'results/m-project/04_summary/{project}/mMAG_summary_info.tsv',
     output:
         m_filter = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAG_summary_info.filter.tsv',
         mk = path + 'markers/pmr_m-project/02_quality_gate/{project}.mk',
+        genome_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
     params:
         MAGs_taxonomy_classify_method = config["Params_m_sample"]["02_taxonomy"]["MAGs_taxonomy_classify_method"],
         MAGs_min_completeness1 = config["Params_pmr_m_project"]["02_quality_gate"]["MAGs_min_completeness1"],
@@ -80,7 +68,6 @@ rule pmr_m_project_02_quality_gate:
         MAGs_max_contamination2 = config["Params_pmr_m_project"]["02_quality_gate"]["MAGs_max_contamination2"],
         drep_dir = path + 'results/m-project/01_drep_project_95/{project}/dereplicated_genomes/',
         gated_dir = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated',
-        genome_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
     conda: config["conda_envs"]["metalink-main"]
     priority: 1
     threads: 1
@@ -102,15 +89,19 @@ rule pmr_m_project_02_quality_gate:
 
         # the gated genome set is sequence-level: rewrite it (and the gated
         # symlink dir) only when the set actually changed, so taxonomy-only
-        # reruns do not retrigger the reference/index/mapping chain
-        awk -F'\t' 'NR>1{{print $1}}' {output.m_filter} | sort -u > {params.genome_list}.tmp 2>> {log}
+        # reruns do not retrigger the reference/index/mapping chain. The .list
+        # is a declared output and is wiped before every rerun of this rule;
+        # the non-declared .shadow copy survives and carries the timestamp of
+        # the last genuine set change.
+        awk -F'\t' 'NR==1{{c=0; for(i=1;i<=NF;i++) if($i=="dRep_95_representative") c=i; next}} {{if(c==0) print $1; else if($c!="CheckM_filter" && $c!="") print $c}}' {output.m_filter} | sort -u > {output.genome_list}.tmp 2>> {log}
         if [ ! -d {params.gated_dir} ]; then _gate_reason="gated_dir missing";
-        elif [ ! -f {params.genome_list} ]; then _gate_reason="genome_list missing";
-        elif ! cmp -s {params.genome_list}.tmp {params.genome_list}; then _gate_reason="genome set changed";
+        elif [ ! -f {output.genome_list}.shadow ]; then _gate_reason="shadow missing (first run or legacy workdir)";
+        elif ! cmp -s {output.genome_list}.tmp {output.genome_list}.shadow; then _gate_reason="genome set changed";
         else _gate_reason=""; fi
         if [ -n "$_gate_reason" ]; then
             echo "[INFO] rewrite gated genomes: ${{_gate_reason}}" >> {log}
-            mv {params.genome_list}.tmp {params.genome_list}
+            mv {output.genome_list}.tmp {output.genome_list}
+            cp -p {output.genome_list} {output.genome_list}.shadow
             mkdir -p {params.gated_dir} 2>> {log}
             rm -f {params.gated_dir}/*.fna 2>> {log}
             while read g; do
@@ -118,12 +109,13 @@ rule pmr_m_project_02_quality_gate:
                     [ -e "$f" ] || continue
                     ln -sf "$f" {params.gated_dir}/"$(basename "$f")"
                 done
-            done < {params.genome_list}
+            done < {output.genome_list}
         else
-            echo "[INFO] gated genome set unchanged; keep existing {params.genome_list} and {params.gated_dir}" >> {log}
-            rm -f {params.genome_list}.tmp
+            echo "[INFO] gated genome set unchanged; restore {output.genome_list} with the timestamp of the last genuine change" >> {log}
+            mv {output.genome_list}.tmp {output.genome_list}
+            touch -r {output.genome_list}.shadow {output.genome_list}
         fi
-        n_mMAG=$(wc -l < {params.genome_list})
+        n_mMAG=$(wc -l < {output.genome_list})
         echo "[INFO] project {wildcards.project}: $n_mMAG mMAG(s) passed the quality gate." | tee -a {log} >&2
         if [ "$n_mMAG" -eq 0 ]; then
             echo "[WARNING] project {wildcards.project}: no mMAGs passed the quality gate; downstream reference/mapping will be empty." | tee -a {log} >&2
@@ -133,7 +125,7 @@ rule pmr_m_project_02_quality_gate:
 
 rule pmr_m_project_03_index_bwamem:
     input:
-        gated_list = lambda wildcards: pmr_m_gated_input(wildcards, 'mMAGs_gated.list'),
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
     output:
         mk = path + 'markers/pmr_m-project/03_index/bwamem/{project}.mk',
     params:
@@ -194,7 +186,7 @@ rule pmr_m_sample_03_mapping_bwamem:
 
 rule pmr_m_project_03_index_bwamem2:
     input:
-        gated_list = lambda wildcards: pmr_m_gated_input(wildcards, 'mMAGs_gated.list'),
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
     output:
         mk = path + 'markers/pmr_m-project/03_index/bwamem2/{project}.mk',
     params:
@@ -254,7 +246,7 @@ rule pmr_m_sample_03_mapping_bwamem2:
 
 rule pmr_m_project_03_index_minibwa:
     input:
-        gated_list = lambda wildcards: pmr_m_gated_input(wildcards, 'mMAGs_gated.list'),
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
     output:
         mk = path + 'markers/pmr_m-project/03_index/minibwa/{project}.mk',
     params:
@@ -316,7 +308,7 @@ rule pmr_m_sample_03_mapping_minibwa:
 
 rule pmr_m_project_03_index_strobealign:
     input:
-        gated_list = lambda wildcards: pmr_m_gated_input(wildcards, 'mMAGs_gated.list'),
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
         r_s = expand(path + 'results/b-sample/01_trim/{sample}_trimmed_s.fastq.gz', sample=SAMPLE_INDEX),
     output:
         mk = path + 'markers/pmr_m-project/03_index/strobealign/{project}.mk',
@@ -413,7 +405,7 @@ rule pmr_m_sample_03_mapping_strobealign:
 rule pmr_m_sample_03_coverm_MAGs:
     input:
         mk = pmr_m_get_03_mapping_rule_mk,
-        gated_list = lambda wildcards: pmr_m_gated_input(wildcards, 'mMAGs_gated.list'),
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
         bam = path + 'results/pmr_m-sample/03_mapping/' + pmr_m_sample_mapping_method + '/{project}/{sample}.bam',
     output:
         out_coverm = path + 'results/pmr_m-sample/03_coverm_MAGs/{project}/{sample}.tsv',
@@ -463,7 +455,7 @@ rule pmr_m_sample_03_coverm_contigs:
     priority: 80
     input:
         mk = pmr_m_get_03_mapping_rule_mk,
-        gated_list = lambda wildcards: pmr_m_gated_input(wildcards, 'mMAGs_gated.list'),
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
         bam = path + 'results/pmr_m-sample/03_mapping/' + pmr_m_sample_mapping_method + '/{project}/{sample}.bam',
     output:
         out_coverm = path + 'results/pmr_m-sample/03_coverm_contigs/{project}/{sample}.tsv',
@@ -1140,6 +1132,7 @@ rule pmr_m_sample_12_delete_bam:
     input:
         out_coverm = path + 'results/pmr_m-sample/03_coverm_MAGs/{project}/{sample}.tsv',
         out_coverm_contigs = path + 'results/pmr_m-sample/03_coverm_contigs/{project}/{sample}.tsv',
+        bam_stats = path + 'results/pmr_m-sample/04_bam_summary/{project}/{sample}.bam_stats.tsv',
     output:
         mk = path + 'markers/pmr_m-sample/12_delete_bam/{project}/{sample}.mk'
     threads: 1
@@ -1154,4 +1147,47 @@ rule pmr_m_sample_12_delete_bam:
         """
         if [ -e "{params.bam}" ];then rm -r {params.bam}*;else echo Folder merged.bam not exist.;fi > {log} 2>&1
         touch {output.mk}
+        """
+
+
+rule pmr_m_sample_04_bam_summary:
+    """Per-sample flagstat of the project-reference mapping BAM."""
+    input:
+        mk = pmr_m_get_03_mapping_rule_mk,
+        bam = path + 'results/pmr_m-sample/03_mapping/' + pmr_m_sample_mapping_method + '/{project}/{sample}.bam',
+    output:
+        path + 'results/pmr_m-sample/04_bam_summary/{project}/{sample}.bam_stats.tsv',
+    threads: 1
+    conda: config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/pmr_m-sample/04_bam_summary/{project}/{sample}.bam_summary.log'
+    benchmark:
+        path + 'benchmarks/pmr_m-sample/04_bam_summary/{project}/{sample}.bam_summary.benchmark'
+    shell:
+        """
+        samtools flagstat {input.bam} > {output} 2> {log}
+        """
+
+rule pmr_m_project_04_bam_summary:
+    """Aggregate per-sample flagstat files into a project-level mapping
+    summary table and figure."""
+    input:
+        expand(path + 'results/pmr_m-sample/04_bam_summary/{project}/{sample}.bam_stats.tsv', project=PROJECT_INDEX, sample=SAMPLE_INDEX),
+    output:
+        tsv = path + 'results/pmr_m-project/04_bam_summary/{project}.bam_mapping_summary.tsv',
+        pdf = path + 'results/pmr_m-project/04_bam_summary/{project}.bam_mapping_summary.pdf',
+    params:
+        in_dir = path + 'results/pmr_m-sample/04_bam_summary/{project}/',
+    threads: 1
+    conda: config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/pmr_m-project/04_bam_summary/{project}.bam_summary.log'
+    benchmark:
+        path + 'benchmarks/pmr_m-project/04_bam_summary/{project}.bam_summary.benchmark'
+    shell:
+        """
+        Rscript {Dir_script_metalink}/summarize_bam_flagstat.cmd.R \
+            --input_dir {params.in_dir} \
+            --out_tsv {output.tsv} \
+            --out_pdf {output.pdf} > {log} 2>&1
         """

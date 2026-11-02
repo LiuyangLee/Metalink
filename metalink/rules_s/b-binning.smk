@@ -309,3 +309,28 @@ rule b_sample_12_delete_metawrap_work_files:
         if [ -e "{params.asb}.fa" ];then rm -r {params.asb}*;else echo Folder metabat2.assembly.fa not exist.;fi > {log} 2>&1
         touch {output.mk}
         """
+
+
+rule b_project_08_MAG_quality_summary:
+    """Aggregate per-sample CheckM stats into a project-level MAG quality table
+    and a completeness-vs-contamination figure (MIMAG tiers)."""
+    input:
+        expand(path + 'results/b-sample/08_gather_bin_high_quality/checkm_stats/{sample}.csv', sample=SAMPLE_INDEX),
+    output:
+        tsv = path + 'results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.tsv',
+        pdf = path + 'results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.pdf',
+    params:
+        in_dir = path + 'results/b-sample/08_gather_bin_high_quality/checkm_stats/',
+    threads: 1
+    conda: config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.log'
+    benchmark:
+        path + 'benchmarks/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.benchmark'
+    shell:
+        """
+        Rscript {Dir_script_metalink}/summarize_MAG_quality.cmd.R \
+            --input_dir {params.in_dir} \
+            --out_tsv {output.tsv} \
+            --out_pdf {output.pdf} > {log} 2>&1
+        """

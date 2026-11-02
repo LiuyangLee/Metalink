@@ -4,6 +4,7 @@ rule vcr_end_target:
         p_b_mk_12 =  expand(path + 'results/b-project/02_cat_trimmed_stats/{project}/02_clean_reads_stats.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
         p_b_mk_13 =  expand(path + 'markers/b-project/03_contigs_stats/{project}/03_contigs_stats.mk', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
         p_b_mk_14 =  expand(path + 'results/b-project/04_merge_reads_contigs_stats/{project}/04_reads_contigs_ffn_stats.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
+        p_bam_summary = expand(path + 'results/b-project/04_bam_summary/{project}.bam_mapping_summary.tsv', project=PROJECT_INDEX) if RUN_PROJECT_LEVEL else [],
         s_gz_03_s  = expand(path + 'results/vcr-sample/03_taxonomy/kraken2/unmapped_reads_singleton/{sample}.kraken2.read2classification.tsv.gz', sample=SAMPLE_INDEX),
         s_ffn_len  = expand(path + 'results/vcr-sample/02_FragGeneScanRs/{sample}_unmapped_s.ffn_length.gz', sample=SAMPLE_INDEX),
         s_ffn_stats  = expand(path + 'results/vcr-sample/02_FragGeneScanRs_stats/{sample}_unmapped_s.fna.stats', sample=SAMPLE_INDEX),

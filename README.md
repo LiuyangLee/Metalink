@@ -49,6 +49,8 @@ Metalink implements an integrated strategy that functionally and taxonomically p
   - [Reusing a config file](#reusing-a-config-file)
 - [Running modes](#running-modes)
   - [Available modes](#available-modes)
+  - [Mapping rate as a guide for mode selection](#mapping-rate-as-a-guide-for-mode-selection)
+  - [MAG modes and MAG quality summary](#mag-modes-and-mag-quality-summary)
   - [Skip-level modes](#skip-level-modes)
     - [Advanced skip-level use cases](#advanced-skip-level-use-cases)
   - [Paired-end vs single-end vs long-read](#paired-end-vs-single-end-vs-long-read)
@@ -76,8 +78,8 @@ The fastest way to get the Metalink CLI:
 
 ```bash
 # 1. Create a Python environment
-conda create -n metalink-0.3.8
-conda activate metalink-0.3.8
+conda create -n metalink-0.3.9
+conda activate metalink-0.3.9
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 2. Install Metalink from PyPI
@@ -107,8 +109,8 @@ git clone https://github.com/LiuyangLee/Metalink.git
 cd Metalink
 
 # 2. Create a Python environment for the Metalink CLI
-conda create -n metalink-0.3.8
-conda activate metalink-0.3.8
+conda create -n metalink-0.3.9
+conda activate metalink-0.3.9
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 3. Install Metalink CLI
@@ -118,8 +120,8 @@ pip install -e .
 #### Option 3: Bioconda Installation
 
 ```bash
-conda create -n metalink-0.3.8
-conda activate metalink-0.3.8
+conda create -n metalink-0.3.9
+conda activate metalink-0.3.9
 mamba install -c bioconda metalink
 ```
 
@@ -130,7 +132,7 @@ mamba install -c bioconda metalink
 #### Verify installation
 
 ```bash
-conda activate metalink-0.3.8
+conda activate metalink-0.3.9
 metalink --help
 metalink b --help
 ```
@@ -245,6 +247,9 @@ Approximate disk and memory requirements of the databases (Metalink-built: v2025
 | VirSorter2 DB | v2.2.4 | ~12 GB | — |
 | VIBRANT DB | v1.2.1 | ~8.0 GB | — |
 | iPHoP DB | Jun_2025_pub_rw | ~294 GB | — |
+
+> [!NOTE]
+> The reduced kraken2 variants (`kraken2_16GB` / `64GB` / `256GB`) are built with `kraken2-build --max-db-size`, so their coverage is lower than that of the full database (`kraken2_raw`).
 
 ---
 
@@ -444,6 +449,39 @@ metalink vmcr -i sample.tsv -w out_dir --run-project --rulegraph | dot -Tpdf > M
   <em>Fig. 4 | Rule graph of the <code>r</code> mode, generated directly with <code>metalink r -i sample.tsv -w out_dir --rulegraph | dot -Tpdf &gt; Metalink.r.sample.dag.pdf</code>: each node is a Snakemake rule and each edge is a file dependency between rules.</em>
 </p>
 
+### Mapping rate as a guide for mode selection
+
+If you are not yet familiar with your data, the mapping-rate summary offers a suggested reference for choosing a mode (not a strict rule).
+
+Each run writes a project-level mapping summary (one row per sample, all flagstat metrics) plus a summary figure:
+
+- `b` mode: `results/b-project/04_bam_summary/{project}.bam_mapping_summary.tsv` / `.pdf`
+- `pmr --mags m` / `v` / `vm`: `results/pmr_{m,v,vm}-project/04_bam_summary/{project}.bam_mapping_summary.tsv` / `.pdf`
+
+Guidance from the `mapping_rate` column:
+
+- **≥ 95%**: most reads are assembled — contig-based modes (`c`, `mc`, `vc`) can give an accurate community profile.
+- **< 80%, especially < 50%**: many reads never assembled — use read-inclusive integrated modes (`cr`, `vcr`,`mcr`, `vmcr`) so the unassembled fraction is still profiled.
+
+<p align="center">
+  <img src="Fig.5.png" alt="Mapping rate summary" width="80%">
+</p>
+
+<p align="center">
+  <em>Fig. 5 | Example from a real case (assembly of 1,444 real metagenomes): per-sample mapping rates sorted with 50%/80%/95% guideline lines (left), and the number of samples in each mapping-rate bin (right).</em>
+</p>
+
+### MAG modes and MAG quality summary
+
+MAG-bearing modes (`m`, `mc`, `mcr`, `vm`, `vmc`, `vmcr`, and `pmr --mags m`|`vm`) bin contigs into MAGs, quality-control them with CheckM/CheckM2, and dereplicate with dRep. For a quick look at binning quality, the base (`b`) chain already produces a project-level MAG quality summary: `results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.tsv` / `.pdf`
+
+<p align="center">
+  <img src="Fig.6.png" alt="MAG quality distribution" width="70%">
+</p>
+
+<p align="center">
+  <em>Fig. 6 | Example from a real case (binning of 1,444 real metagenomes): completeness vs. contamination of all binned MAGs, colored by MIMAG tier (High ≥90%/≤5%, Medium ≥50%/≤10%, Partial otherwise), with marginal histograms.</em>
+</p>
 
 ### Skip-level modes
 
@@ -467,12 +505,15 @@ Metalink's built-in assembler and binner combinations cover the most common scen
 |----------|-----------|------------------|---------------|-------------------|
 | **Hybrid assembly** (2nd-gen + 3rd-gen mixed) | `2` | Pre-assembled contigs (from external hybrid assembler) + clean reads (paired or long reads) | Any (`c`, `m`, `mc`, `mcr`, etc.) | Skips trimming and assembly; runs mapping, binning, annotation, and MAGs/contigs/reads taxonomy/function annotation and project-level aggregation |
 | **Long-read binning** | `3` | Pre-binned MAGs (from external binner) + contigs (from external assembler) + clean reads | Any (`m`, `mc`, `mcr`, etc.) | Skips trimming, assembly, and binning; runs MAGs/contigs/reads taxonomy/function annotation and project-level aggregation |
-| **Metatranscriptome read mapping to MAGs** | `3` | Pre-binned MAGs (from external binner) + metatranscriptome reads | `pmr` | Skips trimming, assembly, and binning; maps reads to provided MAGs and performs project-level MAG + read analysis |
+| **Metatranscriptome read mapping to MAGs** | `3` | Pre-binned mMAGs (from external binner) + metatranscriptome reads | `pmr` | Skips trimming, assembly, and binning; maps reads to provided mMAGs and performs project-level MAG + read analysis |
+| **External/custom mMAG collections across samples** | `3` | Reads + contigs + custom mMAG directory (shared or per-sample) | `pmr --mags m`/`vm` | Analyzes a user-supplied mMAG collection across all samples (see below) |
+
+**Custom mMAG collections in `pmr` (`--mags m`/`vm`)**: `mMAG_dir` accepts mMAGs from **any source** — e.g. a reference genome collection or a mixed mMAG set shared by all samples — enabling cross-sample analysis of a custom genome collection. The mMAG contig IDs do not need to match the sample's contigs, but must be unique across the genomes within one `mMAG_dir`. vMAGs cannot be supplied externally. See [Custom mMAG collections in pmr](README_DETAIL.md#advanced-skip-level-use-cases) for details.
 
 > [!TIP]
 >- For hybrid assembly, generate contigs with your preferred tool, then supply them in the TSV's `contig_file` column and run with `--skip-level 2`.
 >- For metatranscriptomes, rRNA should be removed.
->- For `--skip-level 3`, place each sample's MAG directory (with existing MAGs) in the `mMAG_dir` column of the TSV.
+>- For `--skip-level 3`, place each sample's MAG directory (with existing MAGs) in the `mMAG_dir` column of the TSV. (Exception: in `pmr` `--mags m`/`vm` this may instead be a custom mMAG collection from any source — see the paragraph above.)
 >- For `v`/`vc`/`vcr` and `pmr --mags v`, skip-level `3` is equivalent to skip-level `2` (these modes do not use mMAGs, so the `mMAG_dir` column is not required).
 
 
