@@ -1,3 +1,9 @@
+### Metalink 0.3.10
+
+Release notes for Metalink 0.3.10 (2026-11-03).
+
+- **Clearer pmr vMAG gate logging**: the `pmr --mags v` quality gate log now reports both levels of the vMAG set explicitly — the number of individual vMAGs passing the quality gate and the number of vclust cluster representatives actually used as the mapping reference (e.g. `852 vMAG(s) passed the quality gate; 140 cluster representative(s) used as reference.`) — instead of a single count that mixed the two levels. `pmr --mags vm` gains the same gate summary line for its mMAG and vMAG sides (previously it printed none). Behavior and outputs are unchanged; only the log message is affected.
+
 ### Metalink 0.3.9
 
 Release notes for Metalink 0.3.9 (2026-11-03).

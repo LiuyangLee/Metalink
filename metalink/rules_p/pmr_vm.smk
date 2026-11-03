@@ -191,6 +191,10 @@ rule pmr_vm_project_02_quality_gate:
             mv {output.gated_fna}.tmp {output.gated_fna}
             touch -r {output.v_genome_list}.shadow {output.v_genome_list} {output.gated_fna}
         fi
+        n_mMAG=$(wc -l < {output.m_genome_list})
+        n_vMAG=$(wc -l < {output.v_genome_list})
+        n_vrep=$(find {params.gated_dir} -maxdepth 1 -name '*.fna' | wc -l)
+        echo "[INFO] project {wildcards.project}: $n_mMAG mMAG(s) and $n_vMAG vMAG(s) passed the quality gate; $n_vrep vMAG cluster representative(s) used as reference." | tee -a {log} >&2
         touch {output.mk}
         """
 
