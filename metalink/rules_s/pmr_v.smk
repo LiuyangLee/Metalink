@@ -104,6 +104,7 @@ rule pmr_v_project_02_quality_gate:
         v_tax_tsv = path + 'results/v-project/10_summary/' + pmr_v_project_07_iphop_suffix + '/{project}/vMAG_summary_info.tsv',
         vclust_dir = path + 'results/v-project/06_vclust/{project}/vMAGs_clusters_fna/',
         gated_dir = path + 'results/pmr_v-project/02_quality_gate/{project}.vMAGs_gated',
+        gated_rep_list = path + 'results/pmr_v-project/02_quality_gate/{project}.vMAGs_vclust.gated.list',
     conda: config["conda_envs"]["metalink-main"]
     priority: 1
     threads: 1
@@ -159,8 +160,9 @@ rule pmr_v_project_02_quality_gate:
             touch -r {output.genome_list}.shadow {output.genome_list} {output.gated_fna}
         fi
         n_vMAG=$(wc -l < {output.genome_list})
-        n_vrep=$(find {params.gated_dir} -maxdepth 1 -name '*.fna' | wc -l)
-        echo "[INFO] project {wildcards.project}: $n_vMAG vMAG(s) passed the quality gate ({wildcards.project}.vMAG_summary_info.filter.tsv); $n_vrep vclust cluster representative(s) used as the mapping reference ({wildcards.project}.vMAGs_vclust.gated.fna)." | tee -a {log} >&2
+        find {params.gated_dir} -maxdepth 1 -name '*.fna' -printf '%f\n' | sed 's/\.fna$//' | sort > {params.gated_rep_list} 2>> {log}
+        n_vrep=$(wc -l < {params.gated_rep_list})
+        echo "[INFO] project {wildcards.project}: $n_vMAG vMAG(s) passed the quality gate ({wildcards.project}.vMAG_summary_info.filter.tsv); $n_vrep vclust cluster representative(s) used as the mapping reference ({wildcards.project}.vMAGs_vclust.gated.list)." | tee -a {log} >&2
         if [ "$n_vMAG" -eq 0 ]; then
             echo "[WARNING] project {wildcards.project}: no vMAGs passed the quality gate; downstream reference/mapping will be empty." | tee -a {log} >&2
         fi

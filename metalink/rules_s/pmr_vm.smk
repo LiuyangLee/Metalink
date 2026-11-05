@@ -115,6 +115,7 @@ rule pmr_vm_project_02_quality_gate:
         v_tax_tsv = path + 'results/v-project/10_summary/' + pmr_vm_iphop_suffix + '/{project}/vMAG_summary_info.tsv',
         vclust_dir = path + 'results/v-project/06_vclust/{project}/vMAGs_clusters_fna/',
         gated_dir = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_gated',
+        gated_rep_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_vclust.gated.list',
     conda: config["conda_envs"]["metalink-main"]
     priority: 1
     threads: 1
@@ -194,9 +195,10 @@ rule pmr_vm_project_02_quality_gate:
         n_mpass=$(($(wc -l < {output.m_filter}) - 1))
         n_mMAG=$(wc -l < {output.m_genome_list})
         n_vMAG=$(wc -l < {output.v_genome_list})
-        n_vrep=$(find {params.gated_dir} -maxdepth 1 -name '*.fna' | wc -l)
+        find {params.gated_dir} -maxdepth 1 -name '*.fna' -printf '%f\n' | sed 's/\.fna$//' | sort > {params.gated_rep_list} 2>> {log}
+        n_vrep=$(wc -l < {params.gated_rep_list})
         echo "[INFO] project {wildcards.project}: $n_mpass mMAG(s) passed the quality gate ({wildcards.project}.mMAG_summary_info.filter.tsv); $n_mMAG dereplicated representative(s) used as the mapping reference ({wildcards.project}.mMAGs_gated.list)." | tee -a {log} >&2
-        echo "[INFO] project {wildcards.project}: $n_vMAG vMAG(s) passed the quality gate ({wildcards.project}.vMAG_summary_info.filter.tsv); $n_vrep vclust cluster representative(s) used as the mapping reference ({wildcards.project}.vMAGs_vclust.gated.fna)." | tee -a {log} >&2
+        echo "[INFO] project {wildcards.project}: $n_vMAG vMAG(s) passed the quality gate ({wildcards.project}.vMAG_summary_info.filter.tsv); $n_vrep vclust cluster representative(s) used as the mapping reference ({wildcards.project}.vMAGs_vclust.gated.list)." | tee -a {log} >&2
         touch {output.mk}
         """
 
