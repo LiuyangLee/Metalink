@@ -59,7 +59,7 @@ rule pmr_m_project_02_quality_gate:
     output:
         m_filter = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAG_summary_info.filter.tsv',
         mk = path + 'markers/pmr_m-project/02_quality_gate/{project}.mk',
-        genome_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
+        genome_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
     params:
         MAGs_taxonomy_classify_method = config["Params_m_sample"]["02_taxonomy"]["MAGs_taxonomy_classify_method"],
         MAGs_min_completeness1 = config["Params_pmr_m_project"]["02_quality_gate"]["MAGs_min_completeness1"],
@@ -117,7 +117,7 @@ rule pmr_m_project_02_quality_gate:
         fi
         n_mpass=$(($(wc -l < {output.m_filter}) - 1))
         n_mMAG=$(wc -l < {output.genome_list})
-        echo "[INFO] project {wildcards.project}: $n_mpass mMAG(s) passed the quality gate ({wildcards.project}.mMAG_summary_info.filter.tsv); $n_mMAG dereplicated representative(s) used as the mapping reference ({wildcards.project}.mMAGs_gated.list)." | tee -a {log} >&2
+        echo "[INFO] project {wildcards.project}: $n_mpass mMAG(s) passed the quality gate ({wildcards.project}.mMAG_summary_info.filter.tsv); $n_mMAG dereplicated representative(s) used as the mapping reference ({wildcards.project}.mMAGs_dRep.gated.list)." | tee -a {log} >&2
         if [ "$n_mMAG" -eq 0 ]; then
             echo "[WARNING] project {wildcards.project}: no mMAGs passed the quality gate; downstream reference/mapping will be empty." | tee -a {log} >&2
         fi
@@ -126,7 +126,7 @@ rule pmr_m_project_02_quality_gate:
 
 rule pmr_m_project_03_index_bwamem:
     input:
-        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
     output:
         mk = path + 'markers/pmr_m-project/03_index/bwamem/{project}.mk',
     params:
@@ -185,7 +185,7 @@ rule pmr_m_sample_03_mapping_bwamem:
 
 rule pmr_m_project_03_index_bwamem2:
     input:
-        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
     output:
         mk = path + 'markers/pmr_m-project/03_index/bwamem2/{project}.mk',
     params:
@@ -244,7 +244,7 @@ rule pmr_m_sample_03_mapping_bwamem2:
 
 rule pmr_m_project_03_index_minibwa:
     input:
-        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
     output:
         mk = path + 'markers/pmr_m-project/03_index/minibwa/{project}.mk',
     params:
@@ -305,7 +305,7 @@ rule pmr_m_sample_03_mapping_minibwa:
 
 rule pmr_m_project_03_index_strobealign:
     input:
-        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
         r1 = expand(path + 'results/b-sample/01_trim/{sample}_trimmed_1.fastq.gz', sample=SAMPLE_INDEX),
     output:
         mk = path + 'markers/pmr_m-project/03_index/strobealign/{project}.mk',
@@ -401,7 +401,7 @@ rule pmr_m_sample_03_mapping_strobealign:
 rule pmr_m_sample_03_coverm_MAGs:
     input:
         mk = pmr_m_get_03_mapping_rule_mk,
-        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
         bam = path + 'results/pmr_m-sample/03_mapping/' + pmr_m_sample_mapping_method + '/{project}/{sample}.bam',
     output:
         out_coverm = path + 'results/pmr_m-sample/03_coverm_MAGs/{project}/{sample}.tsv',
@@ -450,7 +450,7 @@ rule pmr_m_sample_03_coverm_contigs:
     priority: 80
     input:
         mk = pmr_m_get_03_mapping_rule_mk,
-        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_gated.list',
+        gated_list = path + 'results/pmr_m-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
         bam = path + 'results/pmr_m-sample/03_mapping/' + pmr_m_sample_mapping_method + '/{project}/{sample}.bam',
     output:
         out_coverm = path + 'results/pmr_m-sample/03_coverm_contigs/{project}/{sample}.tsv',

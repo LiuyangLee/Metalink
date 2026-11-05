@@ -101,7 +101,7 @@ rule pmr_vm_project_02_quality_gate:
     output:
         m_filter = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAG_summary_info.filter.tsv',
         v_filter = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAG_summary_info.filter.tsv',
-        m_genome_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAGs_gated.list',
+        m_genome_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
         v_genome_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_gated.list',
         gated_fna = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_vclust.gated.fna',
         mk = path + 'markers/pmr_vm-project/02_quality_gate/{project}.mk',
@@ -197,7 +197,7 @@ rule pmr_vm_project_02_quality_gate:
         n_vMAG=$(wc -l < {output.v_genome_list})
         find {params.gated_dir} -maxdepth 1 -name '*.fna' -printf '%f\n' | sed 's/\.fna$//' | sort > {params.gated_rep_list} 2>> {log}
         n_vrep=$(wc -l < {params.gated_rep_list})
-        echo "[INFO] project {wildcards.project}: $n_mpass mMAG(s) passed the quality gate ({wildcards.project}.mMAG_summary_info.filter.tsv); $n_mMAG dereplicated representative(s) used as the mapping reference ({wildcards.project}.mMAGs_gated.list)." | tee -a {log} >&2
+        echo "[INFO] project {wildcards.project}: $n_mpass mMAG(s) passed the quality gate ({wildcards.project}.mMAG_summary_info.filter.tsv); $n_mMAG dereplicated representative(s) used as the mapping reference ({wildcards.project}.mMAGs_dRep.gated.list)." | tee -a {log} >&2
         echo "[INFO] project {wildcards.project}: $n_vMAG vMAG(s) passed the quality gate ({wildcards.project}.vMAG_summary_info.filter.tsv); $n_vrep vclust cluster representative(s) used as the mapping reference ({wildcards.project}.vMAGs_vclust.gated.list)." | tee -a {log} >&2
         touch {output.mk}
         """
@@ -205,7 +205,7 @@ rule pmr_vm_project_02_quality_gate:
 rule pmr_vm_project_02_mask_viral:
     input:
         mk_m = path + 'markers/m-project/01_drep_project_95/{project}.mk',
-        m_gated_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAGs_gated.list',
+        m_gated_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.mMAGs_dRep.gated.list',
         v_gated_list = path + 'results/pmr_vm-project/02_quality_gate/{project}.vMAGs_gated.list',
         mk_v10 = expand(path + 'markers/v-sample/10_summary/{sample}.mk', sample=SAMPLE_INDEX),
         orf_loci = expand(path + 'results/b-sample/08_gather_bin_high_quality/bin_ORF_loci/{sample}', sample=SAMPLE_INDEX),
