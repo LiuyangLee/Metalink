@@ -160,7 +160,7 @@ rule pmr_v_project_02_quality_gate:
         fi
         n_vMAG=$(wc -l < {output.genome_list})
         n_vrep=$(find {params.gated_dir} -maxdepth 1 -name '*.fna' | wc -l)
-        echo "[INFO] project {wildcards.project}: $n_vMAG vMAG(s) passed the quality gate; $n_vrep cluster representative(s) used as reference." | tee -a {log} >&2
+        echo "[INFO] project {wildcards.project}: $n_vMAG vMAG(s) passed the quality gate ({wildcards.project}.vMAG_summary_info.filter.tsv); $n_vrep vclust cluster representative(s) used as the mapping reference ({wildcards.project}.vMAGs_vclust.gated.fna)." | tee -a {log} >&2
         if [ "$n_vMAG" -eq 0 ]; then
             echo "[WARNING] project {wildcards.project}: no vMAGs passed the quality gate; downstream reference/mapping will be empty." | tee -a {log} >&2
         fi

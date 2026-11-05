@@ -115,8 +115,9 @@ rule pmr_m_project_02_quality_gate:
             mv {output.genome_list}.tmp {output.genome_list}
             touch -r {output.genome_list}.shadow {output.genome_list}
         fi
+        n_mpass=$(($(wc -l < {output.m_filter}) - 1))
         n_mMAG=$(wc -l < {output.genome_list})
-        echo "[INFO] project {wildcards.project}: $n_mMAG mMAG(s) passed the quality gate." | tee -a {log} >&2
+        echo "[INFO] project {wildcards.project}: $n_mpass mMAG(s) passed the quality gate ({wildcards.project}.mMAG_summary_info.filter.tsv); $n_mMAG dereplicated representative(s) used as the mapping reference ({wildcards.project}.mMAGs_gated.list)." | tee -a {log} >&2
         if [ "$n_mMAG" -eq 0 ]; then
             echo "[WARNING] project {wildcards.project}: no mMAGs passed the quality gate; downstream reference/mapping will be empty." | tee -a {log} >&2
         fi
