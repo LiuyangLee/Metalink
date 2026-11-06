@@ -245,6 +245,25 @@ def _validate_bracken_level(config, mode):
     config['Params_r_sample']['03_taxonomy']['bracken_level'] = lvl
 
 
+_TARGET_STAGES = ('all', 'taxonomy', 'function', 'taxonomy_and_function')
+
+def _validate_target_stage(config, mode):
+    """r/c modes: 00_target_stage must be a known stage; an invalid value
+    would silently run only the base chain (no classification at all)."""
+    if mode not in ('r', 'c'):
+        return
+    key = ['Params_{}_sample'.format(mode), '00_target_stage']
+    stage = _get_nested(config, key)
+    if stage is None:
+        return  # template default applies
+    stage = str(stage).strip()
+    if stage not in _TARGET_STAGES:
+        raise ValueError(
+            "Invalid target_stage {!r} in {}; choose one of {}.".format(
+                stage, ' -> '.join(key), '/'.join(_TARGET_STAGES)))
+    config[key[0]][key[1]] = stage
+
+
 def _validate_read_type_assembly_method(config, mode, skip_level=0):
     """Validate that read_type and assembly_method are compatible.
 
@@ -977,6 +996,7 @@ def make_config(mode, input_tsv, threads, cli_overrides, config_f, db_dir=None,
     # Validate read_type and assembly_method compatibility for modes that actually run assembly
     _validate_read_type_assembly_method(cfg, mode, skip_level)
     _validate_bracken_level(cfg, mode)
+    _validate_target_stage(cfg, mode)
 
     _rules_dir = _rules_dir_for(cfg['read_type'])
     _targets_dir = _targets_dir_for(cfg['read_type'])
@@ -1308,6 +1328,14 @@ PARAMS_HELP = {
         'merge_stats_project_threads': (
             ['Params_b_project', '04_merge_reads_contigs_stats', 'threads'], 4, int,
             '04_merge_reads_contigs_stats: Threads.'),
+        'target_stage': (
+            ['Params_c_sample', '00_target_stage'], 'all', str,
+            '\b\nTarget execution stage for contigs-level analysis, using one of [all/taxonomy/function/taxonomy_and_function].\n'
+            'taxonomy: run contig taxonomy classification (kraken2 or CAT_pack) and the taxonomy abundance profile (with --run-project also the project-level Taxa_Sample profile and barplot).\n'
+            'function: run contig function classification (kraken2 or eggNOG-mapper) and the KO abundance profile (with --run-project also the project-level KO_Sample profile).\n'
+            'taxonomy_and_function: run both classifications and both abundance profiles (skip the joint merge step).\n'
+            'all: run taxonomy and function classification, then merge results.'
+        ),
         'contigs_taxonomy_classify_method': (
             ['Params_c_sample', '01_taxonomy', 'contigs_taxonomy_classify_method'], 'kraken2', str,
             '01_taxonomy: Contigs taxonomy classifier using one of [CAT_pack/kraken2].'

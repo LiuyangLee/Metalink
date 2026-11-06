@@ -45,7 +45,11 @@ Metalink implements an integrated strategy that functionally and taxonomically p
 - [Quick start](#quick-start)
   - [Prepare input](#prepare-input)
   - [Run analysis](#run-analysis)
-  - [Minimal database setup (read mode only)](#minimal-database-setup-read-mode-only)
+  - [Minimal database setup (read/contig mode only)](#minimal-database-setup-readcontig-mode-only)
+    - [1. Taxonomy-only profiling](#1-taxonomy-only-profiling)
+    - [2. Function-only profiling](#2-function-only-profiling)
+    - [3. Taxonomy-only binning](#3-taxonomy-only-binning)
+    - [4. Function-only binning](#4-function-only-binning)
   - [Reusing a config file](#reusing-a-config-file)
 - [Running modes](#running-modes)
   - [Available modes](#available-modes)
@@ -56,11 +60,11 @@ Metalink implements an integrated strategy that functionally and taxonomically p
   - [Paired-end vs single-end vs long-read](#paired-end-vs-single-end-vs-long-read)
   - [Metatranscriptomes](#metatranscriptomes)
   - [Long reads (Nanopore / PacBio)](#long-reads-nanopore--pacbio)
+    - [Supported read types](#supported-read-types)
 - [Resume an interrupted run](#resume-an-interrupted-run)
 - [Documentation](#documentation)
 - [Citation](#citation)
 - [License](#license)
-- [Support](#support)
 
 ---
 
@@ -326,9 +330,9 @@ metalink r -i sample.tsv -d db_dir -w out_dir --run-project -p -j 40
 | **When to use** | Only need individual sample reports | Full project analysis requiring cross-sample comparison and summary |
 
 
-### Minimal database setup (read mode only)
+### Minimal database setup (read/contig mode only)
 
-If you only need read-level profiling, you can run Metalink with a subset of the databases by limiting the read-mode endpoint. The `--target-stage` parameter controls which stages are executed: `"taxonomy"`, `"function"`, `"taxonomy_and_function"`, or `"all"`. When you choose `"taxonomy"` or `"function"`, only the corresponding kraken2 database and lineage file need to be present.
+If you only need read- or contig-level profiling, you can run Metalink with a subset of the databases by limiting the mode endpoint. The `--target-stage` parameter controls which stages are executed: `"taxonomy"`, `"function"`, `"taxonomy_and_function"`, or `"all"`. When you choose `"taxonomy"` or `"function"`, only the corresponding kraken2 database and lineage file need to be present.
 
 #### 1. Taxonomy-only profiling
 
@@ -338,10 +342,11 @@ Required kraken2-format databases:
 Example command:
 
 ```bash
-metalink r -i sample.tsv -d db_dir -w out_dir -j 40 --target-stage taxonomy
+metalink r -i sample.tsv -d db_dir -w out_dir -j 40 --target-stage taxonomy --run-project
+metalink c -i sample.tsv -d db_dir -w out_dir -j 40 --target-stage taxonomy --run-project
 ```
 
-With this setup, Metalink will run trimming, and kraken2 taxonomy classification, then stop before the function-classification and joint-analysis steps.
+With this setup, Metalink will run kraken2 taxonomy classification, then stop before the function-classification and joint-analysis steps.
 
 #### 2. Function-only profiling
 
@@ -351,13 +356,46 @@ Required Metalink-built databases:
 Example command:
 
 ```bash
-metalink r -i sample.tsv -d db_dir -w out_dir -j 40 --target-stage function
+metalink r -i sample.tsv -d db_dir -w out_dir -j 40 --target-stage function --run-project
+metalink c -i sample.tsv -d db_dir -w out_dir -j 40 --target-stage function --run-project
 ```
 
-With this setup, Metalink will run trimming, gene prediction, and kraken2 function classification (LCFH), then stop before the taxonomy classification and joint-analysis steps.
+With this setup, Metalink will run gene prediction and kraken2 function classification (LCFH), then stop before the taxonomy classification and joint-analysis steps.
 
 > [!IMPORTANT]
->- The third-party databases (GTDB-Tk, CheckM2, eggNOG, virus tools, etc.) are **not** required for read-only taxonomy or function profiling when the endpoint is set as shown above.
+>- The third-party databases (GTDB-Tk, CheckM2, eggNOG, virus tools, etc.) are **not** required for read- or contig-only taxonomy or function profiling when the endpoint is set as shown above.
+
+#### 3. Taxonomy-only binning
+
+If you only want to annotate your own sequences with Metalink taxonomy database (unified GTDB + ICTV + NCBI) and do **not** need the abundance profile at all, you can skip the Metalink workflow and call kraken2 directly:
+
+```bash
+kraken2 --threads 40 \
+    --db db_dir/kraken2_taxonomy_db/v20250930/kraken2_raw/ \
+    --use-names \
+    --confidence 0.7 \
+    --report tax.report.tsv \
+    contigs.fna > tax.annotations.tsv
+```
+
+`tax.report.tsv` is the summary report and `tax.annotations.tsv` the per-sequence classification (column 2 = sequence ID, column 3 = assigned taxon name with its taxid). The taxid ↔ taxonomy mapping is stored in `db_dir/kraken2_taxonomy_db/v20250930/kraken2_raw/taxonomy/taxid_tax_lineage.tsv.gz`.
+
+#### 4. Function-only binning
+
+If you only want to annotate your own sequences with Metalink LCFH database and do **not** need the abundance profile at all, you can skip the Metalink workflow and call kraken2 directly, e.g. on ORF nucleotide sequences predicted with prodigal:
+
+```bash
+prodigal -i contigs.fna -d genes.ffn -a genes.faa -p meta
+
+kraken2 --threads 40 \
+    --db db_dir/kraken2_function_db/v20250930/kraken2_raw/ \
+    --use-names \
+    --confidence 0.05 \
+    --report fun.report.tsv \
+    genes.ffn > fun.annotations.tsv
+```
+
+`fun.report.tsv` is the summary report and `fun.annotations.tsv` the per-sequence classification (column 2 = sequence ID, column 3 = assigned KO with its funid in the LCFH hierarchy, although kraken2 labels it as taxid). The funid ↔ KO mapping is stored in `db_dir/kraken2_function_db/v20250930/kraken2_raw/taxonomy/taxid_fun_lineage.tsv.gz`.
 
 ---
 

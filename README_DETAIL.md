@@ -58,7 +58,8 @@ Metalink implements an integrated strategy that functionally and taxonomically p
   - [Choosing a Mode](#choosing-a-mode)
     - [Progressive Workflow (Optional)](#progressive-workflow-optional)
   - [Mode-Specific Differences and Special Cases](#mode-specific-differences-and-special-cases)
-    - [`r`: Read-Only Direct Profiling](#r-read-only-direct-profiling)
+    - [`r`: Read-Only Profiling](#r-read-only-profiling)
+    - [`c`: Contig-Only Profiling](#c-contig-only-profiling)
     - [`v` vs `vm`: iPHoP Host Prediction Strategies](#v-vs-vm-iphop-host-prediction-strategies)
     - [`pmr`: Project-Level Pooled MAGs + Reads](#pmr-project-level-pooled-mags--reads)
   - [Skip-Level: Reusing Pre-Computed Results](#skip-level-reusing-pre-computed-results)
@@ -787,7 +788,7 @@ metalink vmcr -i sample.tsv -d db_dir -w out_dir -j 4 --run-project
 ### Mode-Specific Differences and Special Cases
 
 
-#### `r`: Read-Only Direct Profiling
+#### `r`: Read-Only Profiling
 
 The `r` mode is independent of assembly and binning. It performs direct taxonomic and functional profiling on reads without any assembly- or binning-level steps. This makes it ideal for:
 
@@ -805,6 +806,20 @@ metalink r -i sample.tsv -d db_dir -w out_dir -j 4 --run-project --target-stage 
 metalink r -i sample.tsv -d db_dir -w out_dir -j 4 --run-project --target-stage taxonomy_and_function  # Taxonomy and function (not merge)
 metalink r -i sample.tsv -d db_dir -w out_dir -j 4 --run-project --target-stage all                    # Taxonomy and function (merge)
 ```
+
+#### `c`: Contig-Only Profiling
+
+Like `r` mode, `c` mode supports `--target-stage` to stop after a classification stage:
+
+```bash
+# c mode with target stage control (taxonomy only, function only, or both)
+metalink c -i sample.tsv -d db_dir -w out_dir -j 4 --run-project --target-stage taxonomy               # Taxonomy only
+metalink c -i sample.tsv -d db_dir -w out_dir -j 4 --run-project --target-stage function               # Function only
+metalink c -i sample.tsv -d db_dir -w out_dir -j 4 --run-project --target-stage taxonomy_and_function  # Taxonomy and function (not merge)
+metalink c -i sample.tsv -d db_dir -w out_dir -j 4 --run-project --target-stage all                    # Taxonomy and function (merge)
+```
+
+Each non-`all` stage merges its classification results with contig depth to produce abundance profiles. See [Contig mode (`c`) sample layout](#contig-mode-c-sample-layout-extends-b) for the full file layout of these stage-specific outputs.
 
 #### `v` vs `vm`: iPHoP Host Prediction Strategies
 
@@ -1420,14 +1435,18 @@ results/b-sample/
 results/c-sample/
 ├── 01_taxonomy/kraken2/               # Contig taxonomy by kraken2 (or CAT_pack)
 ├── 02_function/kraken2/               # Contig function by kraken2 (or emapper)
+├── 03_merge_tax_depth/                # Only with --target-stage taxonomy / taxonomy_and_function
+│   ├── Taxa_abundance/                # Taxon depth ({sample}.Taxa_abundance.tsv, same format as in 05_merge_tax_fun_depth)
+│   └── summary/                       # Contig taxonomy summary ({sample}.summary_Tax.tsv)
+├── 04_merge_fun_depth/                # Only with --target-stage function / taxonomy_and_function
+│   └── KO_depth/                      # KO depth ({sample}.KO_depth.tsv, same format as in 05_merge_tax_fun_depth)
 ├── 05_merge_tax_fun_depth/            # Files are named {sample}.xxx directly inside each subdirectory
 │   ├── detail_for_each_seq/           # Per-sequence and per-taxon taxonomic-functional annotations ({sample}.detail_for_each_seq.tsv.gz)
 │   ├── summary/                       # Sample summary TSVs ({sample}.summary_Tax.tsv, ...)
 │   ├── KO_Taxa_RelativeAbundance/     # KO × taxon relative abundance matrices
 │   ├── KO_Taxa_SumCoverage/           # KO × taxon depth matrices
 │   ├── KO_depth/                      # Community KO depth ({sample}.KO_depth.tsv)
-│   ├── Taxa_abundance/                    # Taxon depth ({sample}.Taxa_abundance.tsv)
-│   └── Taxa_abundance/                    # Taxon depth ({sample}.Taxa_abundance.tsv)
+│   └── Taxa_abundance/                # Taxon depth ({sample}.Taxa_abundance.tsv)
 ├── 05_visualization/                  # Sample-level summary barplots (see below)
 └── 06_module_completeness/            # Sample-level module completeness
 ```
@@ -1599,7 +1618,7 @@ Key per-`--mags` differences: the reference genome set (`m`: dRep ANI-95 mMAGs; 
 
 #### Taxonomy and Function Outputs
 
-For contig (`c`), read (`r`), MAG (`m`), and integrated modes (`cr`, `mc`, `mcr`, `pmr`, `vm`, `vc`, `vmc`, `vcr`, `vmcr`), the project outputs include the following standard tables:
+For contig (`c`), read (`r`), MAG (`m`), and integrated modes (`cr`, `mc`, `mcr`, `pmr`, `vm`, `vc`, `vmc`, `vcr`, `vmcr`), the project outputs include the following standard tables.
 
 ```
 results/{mode}-project/
@@ -1736,7 +1755,7 @@ The file follows the CAMI taxonomic profiling format with a metadata header and 
 ```
 # Taxonomic Profiling Output
 @SampleID:sample1
-@Version:0.3.8
+@Version:0.3.10
 @Ranks:superkingdom|phylum|class|order|family|genus|species|strain
 @TaxonomyID:/path/to/taxid_tax_lineage.tsv.gz
 @__program__:metalink c

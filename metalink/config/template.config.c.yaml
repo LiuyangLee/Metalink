@@ -57,6 +57,7 @@ Params_b_project:
     threads: 4
 
 Params_c_sample:
+  00_target_stage: "all"
   01_taxonomy:
     threads: 60
     #contigs_taxonomy_classify_method: "CAT_pack"

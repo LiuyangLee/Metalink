@@ -53,6 +53,121 @@ def get_contigs_sample_02_function_classify_rule_mk(wildcards):
     else:
         raise ValueError(f"Unknown contigs_function_classify_method for c: {contigs_function_classify_method}")
 
+# pipeline endpoint control (see targets.c.smk); project-level taxonomy and
+# function profiles can be built from the stage-specific merge outputs
+TARGET_STAGE = config.get("Params_c_sample", {}).get("00_target_stage", "all")
+
+def get_c_project_taxa_abundance_input(wildcards):
+    if TARGET_STAGE == "all":
+        return expand(path + 'results/c-sample/05_merge_tax_fun_depth/Taxa_abundance/{sample}.Taxa_abundance.tsv', sample=SAMPLE_INDEX)
+    return expand(path + 'results/c-sample/03_merge_tax_depth/Taxa_abundance/{sample}.Taxa_abundance.tsv', sample=SAMPLE_INDEX)
+
+def get_c_project_ko_depth_input(wildcards):
+    if TARGET_STAGE == "all":
+        return expand(path + 'results/c-sample/05_merge_tax_fun_depth/KO_depth/{sample}.KO_depth.tsv', sample=SAMPLE_INDEX)
+    return expand(path + 'results/c-sample/04_merge_fun_depth/KO_depth/{sample}.KO_depth.tsv', sample=SAMPLE_INDEX)
+
+
+rule c_sample_03_merge_tax_depth:
+    priority: 30
+    input:
+        contigs_tax_mk = path + 'markers/c-sample/01_taxonomy/classify_done/{sample}.mk',
+        contigs_depth = path + 'results/b-sample/07_contigs/contigs_filter_depth/{sample}',
+        reads_length = path + 'results/b-sample/01_trim_stats/{sample}_trimmed_s.fastq.stats',
+    output:
+        Taxa_abundance = path + 'results/c-sample/03_merge_tax_depth/Taxa_abundance/{sample}.Taxa_abundance.tsv',
+        summary_Tax = path + 'results/c-sample/03_merge_tax_depth/summary/{sample}.summary_Tax.tsv',
+    params:
+        taxid_tax = taxid_tax_path,
+        contigs_taxonomy_classify_method = contigs_taxonomy_classify_method,
+        contigs_tax_detail = path + 'results/c-sample/01_taxonomy/' + contigs_taxonomy_classify_method + '/{sample}.' + contigs_taxonomy_classify_method + '.contig2classification.tsv',
+        out_CAMI_format = path + 'results/c-sample/03_merge_tax_depth/Taxa_abundance/{sample}.Taxa_abundance.CAMI_format.tsv',
+        CAMI_format_output = config["Params_c_sample"]["05_merge_tax_fun_depth"]["CAMI_format_output"],
+    threads: config["Params_c_sample"]["05_merge_tax_fun_depth"]["threads"]
+    conda:
+        config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/c-sample/03_merge_tax_depth/{sample}.log'
+    benchmark:
+        path + 'benchmarks/c-sample/03_merge_tax_depth/{sample}.benchmark'
+    shell:
+        """
+        echo "Start contigs_sample_03_merge_tax_depth for {wildcards.sample}" > {log}
+        mkdir -p $(dirname {output.Taxa_abundance}) 2>>{log}
+        mkdir -p $(dirname {output.summary_Tax}) 2>>{log}
+        missing=""
+        for f in {params.contigs_tax_detail} {input.contigs_depth} {input.reads_length}; do
+            [ -s "$f" ] || missing="$missing $f"
+        done
+        if [ -n "$missing" ]; then
+            echo "ERROR: missing/empty contigs inputs for {wildcards.sample}; cannot merge taxonomy/depth." >>{log}
+            echo "  missing/empty contigs inputs:$missing" >>{log}
+            echo "ERROR [c_sample_03_merge_tax_depth] sample {wildcards.sample}: missing/empty contigs inputs; check upstream results. See log: {log}" >&2
+            exit 1
+        else
+            echo "All contigs inputs non-empty, running taxonomy-only merge." >>{log}
+            Rscript {Dir_script_metalink}/combine_taxonomy_depth.c.cmd.R \
+                --in_taxid_tax {params.taxid_tax} \
+                --contigs_taxonomy_classify_method {params.contigs_taxonomy_classify_method} \
+                --in_contig_tax_detail {params.contigs_tax_detail} \
+                --in_contig_depth {input.contigs_depth} \
+                --in_read_length {input.reads_length} \
+                --sample_name {wildcards.sample} \
+                --summary_Tax {output.summary_Tax} \
+                --out_Taxa_abundance {output.Taxa_abundance} \
+                --CAMI_format_output {params.CAMI_format_output} \
+                --out_CAMI_format {params.out_CAMI_format} >>{log} 2>&1
+        fi
+        """
+
+rule c_sample_04_merge_fun_depth:
+    priority: 30
+    input:
+        contigs_fun_mk = path + 'markers/c-sample/02_function/classify_done/{sample}.mk',
+        contigs_ffn_length = path + 'results/b-sample/07_contigs/contigs_ffn_length/{sample}',
+        contigs_depth = path + 'results/b-sample/07_contigs/contigs_filter_depth/{sample}',
+    output:
+        KO_depth = path + 'results/c-sample/04_merge_fun_depth/KO_depth/{sample}.KO_depth.tsv',
+    params:
+        taxid_fun = taxid_fun_path,
+        contigs_function_classify_method = contigs_function_classify_method,
+        contigs_fun_detail = path + 'results/c-sample/02_function/' + contigs_function_classify_method + '/annotations/{sample}.' + contigs_function_classify_method + '.annotations.gz',
+        minORFLen = config["Params_c_sample"]["05_merge_tax_fun_depth"]["minORFLen"],
+        KO_mode = config["Params_c_sample"]["05_merge_tax_fun_depth"]["KO_mode"],
+    threads: config["Params_c_sample"]["05_merge_tax_fun_depth"]["threads"]
+    conda:
+        config["conda_envs"]["metalink-main"]
+    log:
+        path + 'logs/c-sample/04_merge_fun_depth/{sample}.log'
+    benchmark:
+        path + 'benchmarks/c-sample/04_merge_fun_depth/{sample}.benchmark'
+    shell:
+        """
+        echo "Start contigs_sample_04_merge_fun_depth for {wildcards.sample}" > {log}
+        mkdir -p $(dirname {output.KO_depth}) 2>>{log}
+        missing=""
+        for f in {params.contigs_fun_detail} {input.contigs_ffn_length} {input.contigs_depth}; do
+            [ -s "$f" ] || missing="$missing $f"
+        done
+        if [ -n "$missing" ]; then
+            echo "ERROR: missing/empty contigs inputs for {wildcards.sample}; cannot merge function/depth." >>{log}
+            echo "  missing/empty contigs inputs:$missing" >>{log}
+            echo "ERROR [c_sample_04_merge_fun_depth] sample {wildcards.sample}: missing/empty contigs inputs; check upstream results. See log: {log}" >&2
+            exit 1
+        else
+            echo "All contigs inputs non-empty, running function-only merge." >>{log}
+            Rscript {Dir_script_metalink}/combine_function_depth.c.cmd.R \
+                --in_taxid_fun {params.taxid_fun} \
+                --contigs_function_classify_method {params.contigs_function_classify_method} \
+                --in_contig_fun_detail {params.contigs_fun_detail} \
+                --in_contig_ffn_length {input.contigs_ffn_length} \
+                --in_contig_depth {input.contigs_depth} \
+                --minORFLen {params.minORFLen} \
+                --KO_mode {params.KO_mode} \
+                --sample_name {wildcards.sample} \
+                --out_KO_eggnog_depth {output.KO_depth} >>{log} 2>&1
+        fi
+        """
 
 rule c_sample_05_merge_tax_fun_depth:
     priority: 30
@@ -250,7 +365,7 @@ rule c_sample_06_module_completeness:
 
 rule c_project_01_cat_Taxa_abundance_dcast:
     input:
-        Taxa_abundance = expand(path + 'results/c-sample/05_merge_tax_fun_depth/Taxa_abundance/{sample}.Taxa_abundance.tsv', sample=SAMPLE_INDEX),
+        Taxa_abundance = get_c_project_taxa_abundance_input,
     output:
         out_long = path + 'results/c-project/01_Taxa_Sample/{project}/Taxa_Sample.long.tsv',
     params:
@@ -322,7 +437,7 @@ rule c_project_01_Taxa_visualize:
 
 rule c_project_02_cat_KO_depth_dcast:
     input:
-        KO_depth = expand(path + 'results/c-sample/05_merge_tax_fun_depth/KO_depth/{sample}.KO_depth.tsv', sample=SAMPLE_INDEX),
+        KO_depth = get_c_project_ko_depth_input,
     output:
         out_long = path + 'results/c-project/02_KO_Sample/{project}/KO_Sample.long.tsv',
     params:
