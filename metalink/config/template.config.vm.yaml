@@ -150,11 +150,11 @@ Params_v_project:
 
 Params_m_sample:
   01_checkm2:
-    threads: 60
+    threads: 8
     extra_args: ""
     # extra_args: "--custom-flag"   # user-supplied extra checkm2 predict
   02_taxonomy:
-    threads: 60
+    threads: 8
     MAGs_taxonomy_classify_method: "gtdbtk" #BAT
   02_taxonomy_gtdbtk:
     extra_args: ""
@@ -187,7 +187,7 @@ Params_m_sample:
     contig_end_exclusion: 75
     threads: 20
   08_function:
-    threads: 60
+    threads: 8
     MAGs_function_classify_method: "emapper"
   08_function_kraken2:
     confidence: 0.05

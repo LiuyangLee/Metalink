@@ -423,6 +423,7 @@ rule cr_sample_05_merge_tax_fun_depth:
                 --CAMI_format_output {params.CAMI_format_output} \
                 --out_CAMI_format {params.out_CAMI_format} \
                 --output_detail {params.output_detail} \
+                --threads {threads} \
                 --detail {params.merge_detail} \
                 --out_mode_flag {output.mode_flag} >>{log} 2>&1
             if [ "{params.output_detail}" = "True" ]; then
@@ -459,6 +460,7 @@ rule cr_sample_05_merge_tax_fun_depth:
                 --CAMI_format_output {params.CAMI_format_output} \
                 --out_CAMI_format {params.out_CAMI_format} \
                 --output_detail {params.output_detail} \
+                --threads {threads} \
                 --detail {params.merge_detail} \
                 --out_mode_flag {output.mode_flag} >>{log} 2>&1
             if [ "{params.output_detail}" = "True" ]; then
@@ -502,6 +504,7 @@ rule cr_sample_05_merge_tax_fun_depth:
                 --CAMI_format_output {params.CAMI_format_output} \
                 --out_CAMI_format {params.out_CAMI_format} \
                 --output_detail {params.output_detail} \
+                --threads {threads} \
                 --detail {params.merge_detail} \
                 --out_mode_flag {output.mode_flag} >>{log} 2>&1
             if [ "{params.output_detail}" = "True" ]; then

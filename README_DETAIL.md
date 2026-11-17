@@ -163,8 +163,8 @@ The fastest way to get the Metalink CLI:
 
 ```bash
 # 1. Create a Python environment
-conda create -n metalink-0.3.10
-conda activate metalink-0.3.10
+conda create -n metalink-0.3.11
+conda activate metalink-0.3.11
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 2. Install Metalink from PyPI
@@ -195,8 +195,8 @@ git clone https://github.com/LiuyangLee/Metalink.git
 cd Metalink
 
 # 2. Create a Python environment for the Metalink CLI
-conda create -n metalink-0.3.10
-conda activate metalink-0.3.10
+conda create -n metalink-0.3.11
+conda activate metalink-0.3.11
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 3. Install Metalink in editable mode
@@ -208,8 +208,8 @@ pip install -e .
 #### Option 3: Bioconda Installation
 
 ```bash
-conda create -n metalink-0.3.10
-conda activate metalink-0.3.10
+conda create -n metalink-0.3.11
+conda activate metalink-0.3.11
 mamba install -c bioconda metalink
 ```
 
@@ -220,7 +220,7 @@ mamba install -c bioconda metalink
 #### Verify installation
 
 ```bash
-conda activate metalink-0.3.10
+conda activate metalink-0.3.11
 metalink --help
 metalink b --help
 ```
@@ -514,7 +514,7 @@ aria2c -c \
 #    First do a dry run (-n; -p prints the shell commands): the job list must
 #    contain ONLY setup_kraken2_function. If download_kraken2_function appears,
 #    the archive is not at the expected path — fix that before the real run.
-conda activate metalink-0.3.10
+conda activate metalink-0.3.11
 metalink download-database -d db_dir --databases kraken2_function --kraken2-function-db-size kraken2_16GB -pn # dry run
 metalink download-database -d db_dir --databases kraken2_function --kraken2-function-db-size kraken2_16GB
 ```
@@ -1755,7 +1755,7 @@ The file follows the CAMI taxonomic profiling format with a metadata header and 
 ```
 # Taxonomic Profiling Output
 @SampleID:sample1
-@Version:0.3.10
+@Version:0.3.11
 @Ranks:superkingdom|phylum|class|order|family|genus|species|strain
 @TaxonomyID:/path/to/taxid_tax_lineage.tsv.gz
 @__program__:metalink c

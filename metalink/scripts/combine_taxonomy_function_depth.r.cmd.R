@@ -103,8 +103,16 @@ option_list <- list(
               help="Output file path to write the execution mode flag (default: NULL)")
 )
 
+option_list <- c(
+  option_list,
+  list(
+    make_option("--threads", type="integer", default=60,
+                help="number of CPU threads for data.table")
+  )
+)
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
+data.table::setDTthreads(opt$threads)
 
 # Assign to variables with same names as before for minimal code change
 reads_function_classify_method <- opt$reads_function_classify_method

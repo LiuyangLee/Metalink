@@ -14,6 +14,12 @@ S/E are 1-based inclusive coordinates on the parent contig, composed from
     cut, only meaningful for ||{i}_partial rows), and
   - CheckV CheckV_result/combined.fna header marks "start-end/length" (the
     CheckV-level cut, relative to its input sequence).
+For circular contigs VirSorter2 computes boundaries on an extended sequence
+(seq+seq after clipping the terminal overlap) but extracts fragments from the
+clipped, non-extended sequence. The reported trim_bp_end can therefore exceed
+the actual extracted fragment. We clip circular vs2_only ends to the
+preprocessed contig length from iter-0/pp-seqname-length.tsv, and fall back to
+the exact substring match when that table is unavailable.
 Every rename is asserted by exact substring matching of the fragment sequence
 against the parent contig (exactly one hit at the composed position); on
 assertion failure the old name is kept and a warning is logged.
@@ -68,23 +74,36 @@ def read_fasta(path):
 
 
 def read_boundary(path):
-    """Return {seqname_new: (trim_bp_start, trim_bp_end)}."""
+    """Return {seqname_new: (trim_bp_start, trim_bp_end, shape)}."""
     table = {}
     with open_maybe_gz(path) as fh:
         header = fh.readline().rstrip('\n').split('\t')
         i_s, i_e = header.index('trim_bp_start'), header.index('trim_bp_end')
         i_new = header.index('seqname_new')
+        i_shape = header.index('shape') if 'shape' in header else None
         for line in fh:
             c = line.rstrip('\n').split('\t')
             if len(c) > i_new and c[i_new]:
-                table[c[i_new]] = (int(c[i_s]), int(c[i_e]))
+                shape = c[i_shape] if i_shape is not None and len(c) > i_shape else 'NA'
+                table[c[i_new]] = (int(c[i_s]), int(c[i_e]), shape)
     return table
 
 
-def compose_coords(name, desc, boundary, warns):
+def read_seq_lengths(path):
+    """Return {seqname: length} from VirSorter2 pp-seqname-length.tsv."""
+    lengths = {}
+    with open_maybe_gz(path) as fh:
+        for line in fh:
+            parts = line.rstrip('\n').split('\t')
+            if len(parts) >= 2:
+                lengths[parts[0]] = int(parts[1])
+    return lengths
+
+
+def compose_coords(name, desc, boundary, warns, seq_lengths=None):
     """Compose parent-contig (S, E) for a fragment scaffold name.
 
-    Returns (parent, S, E, category) or None when the name is not a
+    Returns (parent, S, E, category, shape) or None when the name is not a
     renameable fragment (whole-contig sequence or unrecognized pattern).
     """
     m = FRAG_RE.match(name)
@@ -99,8 +118,17 @@ def compose_coords(name, desc, boundary, warns):
         if base not in boundary:
             warns.append(f'[skip] {name}: not found in final-viral-boundary.tsv')
             return None
-        ts, te = boundary[base]
-        return parent, ts, te, 'vs2_only'
+        ts, te, shape = boundary[base]
+        if shape == 'circular' and seq_lengths is not None:
+            pre_len = seq_lengths.get(parent)
+            if pre_len is not None:
+                if ts > pre_len:
+                    warns.append(f'[skip] {name}: start {ts} beyond circular '
+                                 f'preprocessed length {pre_len}')
+                    return None
+                if te > pre_len:
+                    te = pre_len
+        return parent, ts, te, 'vs2_only', shape
 
     mark = HDR_MARK_RE.match(desc)
     if not mark:
@@ -111,14 +139,14 @@ def compose_coords(name, desc, boundary, warns):
         if base not in boundary:
             warns.append(f'[skip] {name}: {base} not found in final-viral-boundary.tsv')
             return None
-        ts, _ = boundary[base]
-        return parent, ts + cs - 1, ts + ce - 1, 'vs2+checkv'
+        ts, _, shape = boundary[base]
+        return parent, ts + cs - 1, ts + ce - 1, 'vs2+checkv', shape
     # ||full_M / ||lt2gene_M: the VS2-level sequence is the whole contig,
     # so CheckV coords are already parent-contig coords
-    return parent, cs, ce, 'checkv_on_full'
+    return parent, cs, ce, 'checkv_on_full', 'NA'
 
 
-def build_rename_map(metagenome_fna, boundary_tsv, combined_fna):
+def build_rename_map(metagenome_fna, boundary_tsv, combined_fna, seq_lengths=None):
     """Return (rename_map, rows, warns).
 
     rename_map: {old_name: new_name}; rows: audit-table rows (list of str).
@@ -129,10 +157,10 @@ def build_rename_map(metagenome_fna, boundary_tsv, combined_fna):
     rename_map, rows, warns = {}, [], []
 
     for name, (desc, seq) in sorted(fragments.items()):
-        composed = compose_coords(name, desc, boundary, warns)
+        composed = compose_coords(name, desc, boundary, warns, seq_lengths)
         if composed is None:
             continue
-        parent, s, e, category = composed
+        parent, s, e, category, shape = composed
         if contigs is None:
             contigs = read_fasta(metagenome_fna)
         status = ''
@@ -144,6 +172,16 @@ def build_rename_map(metagenome_fna, boundary_tsv, combined_fna):
             hits = pseq.count(seq)
             off = pseq.find(seq)
             if hits == 1 and off == s - 1 and off + len(seq) == e:
+                status = 'renamed'
+                rename_map[name] = new_name
+            elif (category == 'vs2_only' and shape == 'circular'
+                    and hits == 1 and off == s - 1):
+                # Circular contig: VS2 boundary end may refer to the extended
+                # sequence while the extracted fragment stops at the clipped
+                # contig end. The start matches exactly, so accept the real
+                # substring end as the parent-contig coordinate.
+                e = off + len(seq)
+                new_name = f'{parent}|{TAG}_{s}_{e}'
                 status = 'renamed'
                 rename_map[name] = new_name
             else:
@@ -254,12 +292,22 @@ def main():
 
     boundary_tsv = os.path.join(args.virsorter_outdir, 'vs_vb_result', 'final-viral-boundary.tsv')
     combined_fna = os.path.join(args.virsorter_outdir, 'CheckV_result', 'combined.fna')
+    seq_length_tsv = os.path.join(args.virsorter_outdir, 'vs_vb_result', 'iter-0',
+                                  'pp-seqname-length.tsv')
     for p in (args.input_metagenome, boundary_tsv, combined_fna):
         if not os.path.exists(p):
             sys.exit(f'[embed_viral_coords] required input missing: {p}')
 
+    seq_lengths = None
+    if os.path.exists(seq_length_tsv):
+        seq_lengths = read_seq_lengths(seq_length_tsv)
+    else:
+        print(f'[embed_viral_coords] WARNING: {seq_length_tsv} not found; '
+              'circular boundary clipping will rely on substring fallback',
+              file=sys.stderr)
+
     rename_map, rows, warns = build_rename_map(
-        args.input_metagenome, boundary_tsv, combined_fna)
+        args.input_metagenome, boundary_tsv, combined_fna, seq_lengths)
     apply_rename(args.virsorter_outdir, rename_map)
 
     map_file = os.path.join(args.virsorter_outdir, 'rename_map.tsv')

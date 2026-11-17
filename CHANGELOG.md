@@ -1,3 +1,11 @@
+### Metalink 0.3.11
+
+Release notes for Metalink 0.3.11 (2026-11-17).
+
+- **Fixed VirSorter2 circular-contig coordinate embedding**: `Metalink.embed_viral_coords.py` no longer aborts on VirSorter2 `||{i}_partial` fragments whose `trim_bp_end` refers to the extended circular sequence rather than the extracted fragment.
+- **Adjusted thread defaults and control**: Sample-level CheckM2, mMAG taxonomy, and mMAG function annotation now default to 8 threads in all MAG-bearing modes. All 14 merge R scripts now accept `--threads`.
+
+
 ### Metalink 0.3.10
 
 Release notes for Metalink 0.3.10 (2026-11-06).

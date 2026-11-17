@@ -200,7 +200,7 @@ rule r_sample_03_taxonomy_bracken:
     output:
         bracken_report = path + 'results/r-sample/03_taxonomy/bracken/{sample}.bracken.report.tsv',
         bracken_kraken = path + 'results/r-sample/03_taxonomy/bracken/{sample}.bracken_kraken.report.tsv',
-    threads: config["Params_r_sample"]["03_taxonomy"]["threads"]
+    threads: 1
     params:
         databases_path = config["Directory"]["database"]["kraken2_taxonomy_db"],
         read_type = READ_TYPE,
@@ -414,6 +414,7 @@ rule r_sample_05_merge_tax_fun_depth:
                 --CAMI_format_output {params.CAMI_format_output} \
                 --out_CAMI_format {params.out_CAMI_format} \
                 --output_detail {params.output_detail} \
+                --threads {threads} \
                 --detail {params.merge_detail} >>{log} 2>&1
             if [ "{params.output_detail}" = "True" ]; then
                 pigz -p {threads} -r -f {params.merge_detail} > {params.merge_detail}.gz 2>> {log}
@@ -530,7 +531,7 @@ rule r_project_bracken_taxonomic_merge:
         bracken_kraken = expand(path + 'results/r-sample/03_taxonomy/bracken/{sample}.bracken_kraken.report.tsv', sample=SAMPLE_INDEX),
     output:
         count_matrix = path + 'results/r-project/01_Taxa_Sample/{project}/bracken_taxonomic_profiles.count.tsv',
-    threads: config["Params_r_sample"]["03_taxonomy"]["threads"]
+    threads: 1
     params:
         bracken_dir = path + 'results/r-sample/03_taxonomy/bracken/',
         suffix = ".bracken_kraken.report.tsv",
@@ -554,7 +555,7 @@ rule r_project_kraken2_taxonomic_merge:
         kraken = expand(path + 'results/r-sample/03_taxonomy/kraken2/{sample}.kraken2.report.tsv', sample=SAMPLE_INDEX),
     output:
         count_matrix = path + 'results/r-project/01_Taxa_Sample/{project}/kraken2_taxonomic_profiles.count.tsv',
-    threads: config["Params_r_sample"]["03_taxonomy"]["threads"]
+    threads: 1
     params:
         kraken2_dir = path + 'results/r-sample/03_taxonomy/kraken2/',
         suffix = ".kraken2.report.tsv",
@@ -578,7 +579,7 @@ rule r_project_kraken2_functional_merge:
         kraken_report = expand(path + 'results/r-sample/04_function/kraken2/annotations/{sample}.kraken2.report.tsv', sample=SAMPLE_INDEX),
     output:
         count_matrix = path + 'results/r-project/02_KO_Sample/{project}/kraken2_functional_profiles.count.tsv',
-    threads: config["Params_r_sample"]["04_function"]["threads"]
+    threads: 1
     params:
         kraken2_dir = path + 'results/r-sample/04_function/kraken2/annotations/',
         suffix = ".kraken2.report.tsv",

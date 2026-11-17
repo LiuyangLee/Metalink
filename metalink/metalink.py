@@ -2328,7 +2328,7 @@ PARAMS_HELP = {
             ['Params_b_project', '05_gather_project_bin_checkm_stats', 'threads'], 4, int,
             '05_gather_project_bin_checkm_stats: Threads.'),
         'mmags_checkm2_threads': (
-            ['Params_m_sample', '01_checkm2', 'threads'], 60, int,
+            ['Params_m_sample', '01_checkm2', 'threads'], 8, int,
             '01_checkm2: Threads.'),
         'mmags_checkm2_extra_args': (
             ['Params_m_sample', '01_checkm2', 'extra_args'], '', str,
@@ -2338,7 +2338,7 @@ PARAMS_HELP = {
             '02_taxonomy: mMAGs taxonomy classifier, should be one of the [gtdbtk/BAT].'
         ),
         'mmags_taxonomy_threads': (
-            ['Params_m_sample', '02_taxonomy', 'threads'], 60, int,
+            ['Params_m_sample', '02_taxonomy', 'threads'], 8, int,
             '02_taxonomy_gtdbtk: Threads for [gtdbtk/BAT].'),
         'mmags_taxonomy_gtdbtk_extra_args': (
             ['Params_m_sample', '02_taxonomy_gtdbtk', 'extra_args'], '', str,
@@ -2423,7 +2423,7 @@ PARAMS_HELP = {
             '08_function: mMAGs function classifier using one of [kraken2/emapper].'
         ),
         'mmags_function_threads': (
-            ['Params_m_sample', '08_function', 'threads'], 60, int,
+            ['Params_m_sample', '08_function', 'threads'], 8, int,
             '08_function: Threads for [kraken2/emapper].'),
         'mmags_function_kraken2_confidence': (
             ['Params_m_sample', '08_function_kraken2', 'confidence'], 0.05, float,
@@ -2782,7 +2782,7 @@ PARAMS_HELP = {
             ['Params_b_project', '05_gather_project_bin_checkm_stats', 'threads'], 4, int,
             '05_gather_project_bin_checkm_stats: Threads.'),
         'mmags_checkm2_threads': (
-            ['Params_m_sample', '01_checkm2', 'threads'], 60, int,
+            ['Params_m_sample', '01_checkm2', 'threads'], 8, int,
             '01_checkm2: Threads.'),
         'mmags_checkm2_extra_args': (
             ['Params_m_sample', '01_checkm2', 'extra_args'], '', str,
@@ -2792,7 +2792,7 @@ PARAMS_HELP = {
             '02_taxonomy: mMAGs taxonomy classifier, should be one of the [gtdbtk/BAT].'
         ),
         'mmags_taxonomy_threads': (
-            ['Params_m_sample', '02_taxonomy', 'threads'], 60, int,
+            ['Params_m_sample', '02_taxonomy', 'threads'], 8, int,
             '02_taxonomy_gtdbtk: Threads for [gtdbtk/BAT].'),
         'mmags_taxonomy_gtdbtk_extra_args': (
             ['Params_m_sample', '02_taxonomy_gtdbtk', 'extra_args'], '', str,
@@ -2877,7 +2877,7 @@ PARAMS_HELP = {
             '08_function: mMAGs function classifier using one of [kraken2/emapper].'
         ),
         'mmags_function_threads': (
-            ['Params_m_sample', '08_function', 'threads'], 60, int,
+            ['Params_m_sample', '08_function', 'threads'], 8, int,
             '08_function: Threads for [kraken2/emapper].'),
         'mmags_function_kraken2_confidence': (
             ['Params_m_sample', '08_function_kraken2', 'confidence'], 0.05, float,
@@ -3271,7 +3271,7 @@ PARAMS_HELP = {
             ['Params_b_project', '05_gather_project_bin_checkm_stats', 'threads'], 4, int,
             '05_gather_project_bin_checkm_stats: Threads.'),
         'mmags_checkm2_threads': (
-            ['Params_m_sample', '01_checkm2', 'threads'], 60, int,
+            ['Params_m_sample', '01_checkm2', 'threads'], 8, int,
             '01_checkm2: Threads.'),
         'mmags_checkm2_extra_args': (
             ['Params_m_sample', '01_checkm2', 'extra_args'], '', str,
@@ -3281,7 +3281,7 @@ PARAMS_HELP = {
             '02_taxonomy: mMAGs taxonomy classifier, should be one of the [gtdbtk/BAT].'
         ),
         'mmags_taxonomy_threads': (
-            ['Params_m_sample', '02_taxonomy', 'threads'], 60, int,
+            ['Params_m_sample', '02_taxonomy', 'threads'], 8, int,
             '02_taxonomy_gtdbtk: Threads for [gtdbtk/BAT].'),
         'mmags_taxonomy_gtdbtk_extra_args': (
             ['Params_m_sample', '02_taxonomy_gtdbtk', 'extra_args'], '', str,
@@ -3366,7 +3366,7 @@ PARAMS_HELP = {
             '08_function: mMAGs function classifier using one of [kraken2/emapper].'
         ),
         'mmags_function_threads': (
-            ['Params_m_sample', '08_function', 'threads'], 60, int,
+            ['Params_m_sample', '08_function', 'threads'], 8, int,
             '08_function: Threads for [kraken2/emapper].'),
         'mmags_function_kraken2_confidence': (
             ['Params_m_sample', '08_function_kraken2', 'confidence'], 0.05, float,
@@ -3843,7 +3843,7 @@ PARAMS_HELP = {
             ['Params_b_project', '05_gather_project_bin_checkm_stats', 'threads'], 4, int,
             '05_gather_project_bin_checkm_stats: Threads.'),
         'mmags_checkm2_threads': (
-            ['Params_m_sample', '01_checkm2', 'threads'], 60, int,
+            ['Params_m_sample', '01_checkm2', 'threads'], 8, int,
             '01_checkm2: Threads.'),
         'mmags_checkm2_extra_args': (
             ['Params_m_sample', '01_checkm2', 'extra_args'], '', str,
@@ -3853,7 +3853,7 @@ PARAMS_HELP = {
             '02_taxonomy: mMAGs taxonomy classifier, should be one of the [gtdbtk/BAT].'
         ),
         'mmags_taxonomy_threads': (
-            ['Params_m_sample', '02_taxonomy', 'threads'], 60, int,
+            ['Params_m_sample', '02_taxonomy', 'threads'], 8, int,
             '02_taxonomy_gtdbtk: Threads for [gtdbtk/BAT].'),
         'mmags_taxonomy_gtdbtk_extra_args': (
             ['Params_m_sample', '02_taxonomy_gtdbtk', 'extra_args'], '', str,
@@ -3938,7 +3938,7 @@ PARAMS_HELP = {
             '08_function: mMAGs function classifier using one of [kraken2/emapper].'
         ),
         'mmags_function_threads': (
-            ['Params_m_sample', '08_function', 'threads'], 60, int,
+            ['Params_m_sample', '08_function', 'threads'], 8, int,
             '08_function: Threads for [kraken2/emapper].'),
         'mmags_function_kraken2_confidence': (
             ['Params_m_sample', '08_function_kraken2', 'confidence'], 0.05, float,
@@ -4861,7 +4861,7 @@ PARAMS_HELP = {
             ['Params_v_sample', '09_coverm_eachsample_vMAGs', 'extra_args'], '', str,
             '09_coverm_eachsample_vMAGs: Extra arguments forwarded to coverm genome (e.g., "--quiet").'),
         'mmags_checkm2_threads': (
-            ['Params_m_sample', '01_checkm2', 'threads'], 60, int,
+            ['Params_m_sample', '01_checkm2', 'threads'], 8, int,
             '01_checkm2: Threads.'),
         'mmags_checkm2_extra_args': (
             ['Params_m_sample', '01_checkm2', 'extra_args'], '', str,
@@ -4871,7 +4871,7 @@ PARAMS_HELP = {
             '02_taxonomy: mMAGs taxonomy classifier, should be one of the [gtdbtk/BAT].'
         ),
         'mmags_taxonomy_threads': (
-            ['Params_m_sample', '02_taxonomy', 'threads'], 60, int,
+            ['Params_m_sample', '02_taxonomy', 'threads'], 8, int,
             '02_taxonomy_gtdbtk: Threads for [gtdbtk/BAT].'),
         'mmags_taxonomy_gtdbtk_extra_args': (
             ['Params_m_sample', '02_taxonomy_gtdbtk', 'extra_args'], '', str,
@@ -4956,7 +4956,7 @@ PARAMS_HELP = {
             '08_function: mMAGs function classifier using one of [kraken2/emapper].'
         ),
         'mmags_function_threads': (
-            ['Params_m_sample', '08_function', 'threads'], 60, int,
+            ['Params_m_sample', '08_function', 'threads'], 8, int,
             '08_function: Threads for [kraken2/emapper].'),
         'mmags_function_kraken2_confidence': (
             ['Params_m_sample', '08_function_kraken2', 'confidence'], 0.05, float,
@@ -6496,7 +6496,7 @@ PARAMS_HELP = {
             ['Params_v_project', '07_iPHoP', 'threads'], 60, int,
             '07_iPHoP: Threads.'),
         'mmags_checkm2_threads': (
-            ['Params_m_sample', '01_checkm2', 'threads'], 60, int,
+            ['Params_m_sample', '01_checkm2', 'threads'], 8, int,
             '01_checkm2: Threads.'),
         'mmags_checkm2_extra_args': (
             ['Params_m_sample', '01_checkm2', 'extra_args'], '', str,
@@ -6506,7 +6506,7 @@ PARAMS_HELP = {
             '02_taxonomy: mMAGs taxonomy classifier, should be one of the [gtdbtk/BAT].'
         ),
         'mmags_taxonomy_threads': (
-            ['Params_m_sample', '02_taxonomy', 'threads'], 60, int,
+            ['Params_m_sample', '02_taxonomy', 'threads'], 8, int,
             '02_taxonomy_gtdbtk: Threads for [gtdbtk/BAT].'),
         'mmags_taxonomy_gtdbtk_extra_args': (
             ['Params_m_sample', '02_taxonomy_gtdbtk', 'extra_args'], '', str,
@@ -6591,7 +6591,7 @@ PARAMS_HELP = {
             '08_function: mMAGs function classifier using one of [kraken2/emapper].'
         ),
         'mmags_function_threads': (
-            ['Params_m_sample', '08_function', 'threads'], 60, int,
+            ['Params_m_sample', '08_function', 'threads'], 8, int,
             '08_function: Threads for [kraken2/emapper].'),
         'mmags_function_kraken2_confidence': (
             ['Params_m_sample', '08_function_kraken2', 'confidence'], 0.05, float,
@@ -7071,7 +7071,7 @@ PARAMS_HELP = {
             ['Params_v_sample', '09_coverm_eachsample_vMAGs', 'extra_args'], '', str,
             '09_coverm_eachsample_vMAGs: Extra arguments forwarded to coverm genome (e.g., "--quiet").'),
         'mmags_checkm2_threads': (
-            ['Params_m_sample', '01_checkm2', 'threads'], 60, int,
+            ['Params_m_sample', '01_checkm2', 'threads'], 8, int,
             '01_checkm2: Threads.'),
         'mmags_checkm2_extra_args': (
             ['Params_m_sample', '01_checkm2', 'extra_args'], '', str,
@@ -7081,7 +7081,7 @@ PARAMS_HELP = {
             '02_taxonomy: mMAGs taxonomy classifier, should be one of the [gtdbtk/BAT].'
         ),
         'mmags_taxonomy_threads': (
-            ['Params_m_sample', '02_taxonomy', 'threads'], 60, int,
+            ['Params_m_sample', '02_taxonomy', 'threads'], 8, int,
             '02_taxonomy_gtdbtk: Threads for [gtdbtk/BAT].'),
         'mmags_taxonomy_gtdbtk_extra_args': (
             ['Params_m_sample', '02_taxonomy_gtdbtk', 'extra_args'], '', str,
@@ -7166,7 +7166,7 @@ PARAMS_HELP = {
             '08_function: mMAGs function classifier using one of [kraken2/emapper].'
         ),
         'mmags_function_threads': (
-            ['Params_m_sample', '08_function', 'threads'], 60, int,
+            ['Params_m_sample', '08_function', 'threads'], 8, int,
             '08_function: Threads for [kraken2/emapper].'),
         'mmags_function_kraken2_confidence': (
             ['Params_m_sample', '08_function_kraken2', 'confidence'], 0.05, float,

@@ -10,12 +10,12 @@ with open(os.path.join(this_directory, 'README_DETAIL.md')) as f:
 
 setup(
     name='metalink',
-    version='0.3.10',
+    version='0.3.11',
     url='https://github.com/LiuyangLee/Metalink',
     license='GPL-3.0-only',
     author='Liuyang Li',
     author_email='cyanobacteria@yeah.net',
-    description=('Metalink: Joint taxonomic and functional profiling of metagenomes and metatranscriptomes across resolution scales. Metalink can be run in different modes to obtain joint outputs of functional and taxonomic profiles at multiple levels'),
+    description=('Metalink: Joint taxonomic and functional profiling of metagenomes and metatranscriptomes across resolution scales.'),
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=['metalink'],
