@@ -45,7 +45,7 @@ Directory:
 # key at a differently-named environment of your own here.
 conda_envs:
   metalink-main: "metalink-main-0.3"
-  metalink-annotation: "metalink-annotation-0.3"
+  metalink-annotation: "metalink-annotation-0.3.1"
   metalink-binning: "metalink-binning-0.3"
   metalink-gtdbtk: "metalink-gtdbtk-2.4.1"
   metalink-checkm2: "metalink-checkm2-1.1.0"

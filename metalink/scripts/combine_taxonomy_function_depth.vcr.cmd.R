@@ -424,7 +424,7 @@ cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Virus contigs numbe
 
 #####
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract virus MAGs taxononmy from:',in_vMAGs_tax_detail,'\n')
-virus_tax_detail = fread(in_vMAGs_tax_detail,  sep = "\t", #select = c(1,2,4),
+virus_tax_detail = fread(in_vMAGs_tax_detail,  sep = "\t", colClasses = list(character = 1), #select = c(1,2,4),
                          header = T, data.table = T, fill = T)
 colnames(virus_tax_detail)[1] = 'genome'
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'The number of virus MAGs used for analysis',nrow(virus_tax_detail), '\n')
@@ -530,7 +530,7 @@ if (read_type %in% c('paired','paired-rna')) {
   cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract paired reads taxonomy from:',in_read_paired_tax_detail,'\n')
   read_paired_seqid_tax =
     tryCatch({
-      read_paired_tax_detail = fread(in_read_paired_tax_detail, sep = "\t", select = c(2,3), header = FALSE, data.table = T)
+      read_paired_tax_detail = fread(in_read_paired_tax_detail, sep = "\t", select = c(2,3), colClasses = c(V2 = "character"), header = FALSE, data.table = T)
       colnames(read_paired_tax_detail) = c("sample_Read", "taxid")
       read_paired_tax_detail[, taxid := gsub(".* \\(taxid |\\)", "", taxid)]
 
@@ -559,7 +559,7 @@ if (read_type %in% c('paired','paired-rna')) {
 ##########################################################################
 read_singleton_seqid_tax =
   tryCatch({
-    read_singleton_tax_detail = fread(in_read_singleton_tax_detail, sep = "\t", select = c(2,3), header = FALSE, data.table = T)
+    read_singleton_tax_detail = fread(in_read_singleton_tax_detail, sep = "\t", select = c(2,3), colClasses = c(V2 = "character"), header = FALSE, data.table = T)
     colnames(read_singleton_tax_detail) = c("sample_Read", "taxid")
 
     read_singleton_tax_detail[, taxid := gsub(".* \\(taxid |\\)", "", taxid)]
@@ -577,7 +577,7 @@ read_singleton_seqid_tax =
 
     if (read_type %in% c('pacbio-raw','pacbio-corr','pacbio-hifi','nano-raw','nano-corr','nano-hq')) {
       cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Merge per-read fna_length for long-read singleton reads.\n')
-      read_fna_length = fread(in_read_fna_length, sep = '\t', header = T, data.table = T)[, c(1,2), with = FALSE]
+      read_fna_length = fread(in_read_fna_length, sep = '\t', header = T, colClasses = c("character", "numeric"), data.table = T)[, c(1,2), with = FALSE]
       colnames(read_fna_length) = c('sample_Read','SeqLen')
       read_singleton_seqid_tax = merge(read_singleton_seqid_tax, read_fna_length, by = 'sample_Read', all.x = T)
     } else {
@@ -619,7 +619,7 @@ read_taxonomy[, c("SeqLen","Avg_fold", "SeqBases") := NULL]
 ####
 
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract ORF length of vMAGs from:',in_vMAGs_ffn_length,'\n')
-vMAGs_ffn_infor = in_vMAGs_ffn_length %>% {fread(., sep = '\t', header = T, data.table = T)}
+vMAGs_ffn_infor = in_vMAGs_ffn_length %>% {fread(., sep = '\t', colClasses = list(character = 1), header = T, data.table = T)}
 colnames(vMAGs_ffn_infor)[1:2] = c("genome","ORF")
 vMAGs_ffn_infor[, ORFLen := `ORF end` - `ORF start` + 1]
 n_na_orflen <- sum(is.na(vMAGs_ffn_infor$ORFLen))

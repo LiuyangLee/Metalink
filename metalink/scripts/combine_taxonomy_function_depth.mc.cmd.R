@@ -224,7 +224,7 @@ cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Parameter --rank:',
 ##########################################################################
 
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract MAGs taxononmy from:',in_MAGs_tax_detail,'\n')
-MAG_tax_detail = fread(in_MAGs_tax_detail,  sep = "\t", header = T, data.table = F, fill = T)
+MAG_tax_detail = fread(in_MAGs_tax_detail,  sep = "\t", colClasses = list(character = 1), header = T, data.table = F, fill = T)
 colnames(MAG_tax_detail)[1] = "genome"
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'The number of MAGs used for analysis',nrow(MAG_tax_detail), '\n')
 

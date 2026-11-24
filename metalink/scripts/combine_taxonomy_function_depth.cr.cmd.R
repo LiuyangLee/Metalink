@@ -479,7 +479,7 @@ empty_result <- data.frame(
 
 process_read_tax_detail <- function(in_file, seq_len, CAMI_format_output, taxid_taxonomy, label) {
   tryCatch({
-    dt <- fread(in_file, sep = "\t", select = c(2,3), header = FALSE, data.table = TRUE)
+    dt <- fread(in_file, sep = "\t", select = c(2,3), colClasses = c(V2 = "character"), header = FALSE, data.table = TRUE)
     setnames(dt, c("sample_Read", "taxid"))
     dt[, taxid := gsub(".* \\(taxid |\\)", "", taxid)]
     dt <- merge.data.table(dt, taxid_taxonomy, by = 'taxid', all.x = TRUE)
@@ -509,7 +509,7 @@ if (read_type %in% c('paired','paired-rna')) {
 ##########################################################################
 read_singleton_seqid_tax =
   tryCatch({
-    read_singleton_tax_detail = fread(in_read_singleton_tax_detail, sep = "\t", select = c(2,3), header = FALSE, data.table = T)
+    read_singleton_tax_detail = fread(in_read_singleton_tax_detail, sep = "\t", select = c(2,3), colClasses = c(V2 = "character"), header = FALSE, data.table = T)
     colnames(read_singleton_tax_detail) = c("sample_Read", "taxid")
     read_singleton_tax_detail[, taxid := gsub(".* \\(taxid |\\)", "", taxid)]
 
@@ -524,7 +524,7 @@ read_singleton_seqid_tax =
 
     if (read_type %in% c('pacbio-raw','pacbio-corr','pacbio-hifi','nano-raw','nano-corr','nano-hq')) {
       cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Merge per-read fna_length for long-read singleton reads.\n')
-      read_fna_length = fread(in_read_fna_length, sep = '\t', header = T, data.table = T)[, c(1,2), with = FALSE]
+      read_fna_length = fread(in_read_fna_length, sep = '\t', header = T, colClasses = c("character", "numeric"), data.table = T)[, c(1,2), with = FALSE]
       colnames(read_fna_length) = c('sample_Read','SeqLen')
       read_singleton_seqid_tax[read_fna_length, on = "sample_Read", SeqLen := i.SeqLen]
     } else {

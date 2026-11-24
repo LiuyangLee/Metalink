@@ -60,7 +60,7 @@ cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Parameter --checkv_
 ##########################################################################
 
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract virus MAGs taxononmy from:',in_vMAGs_tax_detail,'\n')
-virus_tax_detail = fread(in_vMAGs_tax_detail,  sep = "\t", #select = c(1,2,4),
+virus_tax_detail = fread(in_vMAGs_tax_detail,  sep = "\t", colClasses = list(character = 1), #select = c(1,2,4),
                          header = T, data.table = T, fill = T)
 colnames(virus_tax_detail)[1] = 'genome'
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Total virus MAGs extracted:',nrow(virus_tax_detail), '\n')

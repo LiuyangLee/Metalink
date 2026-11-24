@@ -1,10 +1,10 @@
-name: metalink-annotation-0.3
+name: metalink-annotation-0.3.1
 channels:
   - conda-forge
   - bioconda
 dependencies:
   # MAG taxonomy and quality
-  - drep =3.5.0
+  - drep =4.0.3
   - checkv =1.0.3
   # Contig/MAG taxonomy (CAT_pack)
   - cat =6.0.1

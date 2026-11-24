@@ -1,48 +1,6 @@
-### Metalink 0.3.11
+### Metalink 0.3.12
 
-Release notes for Metalink 0.3.11 (2026-11-17).
+Release notes for Metalink 0.3.12.
 
-- **Fixed VirSorter2 circular-contig coordinate embedding**: `Metalink.embed_viral_coords.py` no longer aborts on VirSorter2 `||{i}_partial` fragments whose `trim_bp_end` refers to the extended circular sequence rather than the extracted fragment.
-- **Adjusted thread defaults and control**: Sample-level CheckM2, mMAG taxonomy, and mMAG function annotation now default to 8 threads in all MAG-bearing modes. All 14 merge R scripts now accept `--threads`.
-
-
-### Metalink 0.3.10
-
-Release notes for Metalink 0.3.10 (2026-11-06).
-
-- **Add `--target-stage` for `c` mode**: contig mode gains the same stage control as read mode — `--target-stage taxonomy` (contig taxonomy classification only), `function` (contig function classification only), `taxonomy_and_function` (both classifications, skip the merge step), or `all` (full pipeline, default). Also available as `Params_c_sample.00_target_stage` in the config.
-- **Abundance profiles for `c` mode non-`all` target stages**: `taxonomy` / `function` / `taxonomy_and_function` runs now merge their classification results with contig depth, in the same formats as the corresponding `05_merge_tax_fun_depth` tables. With `--run-project`, the stages also produce the project-level taxonomic and/or functional profile.
-- **Clearer pmr quality-gate logging**: the `pmr` quality gate now reports both levels of the MAG set explicitly  — how many genomes passed the quality gate (`{project}.[m]vMAG_summary_info.filter.tsv`) and how many dereplicated representatives are actually used as the mapping reference (`{project}.mMAGs_dRep.gated.list` / `{project}.vMAGs_vclust.gated.list`). Applies to `pmr --mags m`|`v`|`vm`; behavior and outputs are otherwise unchanged.
-
-
-### Metalink 0.3.9
-
-Release notes for Metalink 0.3.9 (2026-11-03).
-
-- **Project-level BAM mapping summary**: each run now aggregates the per-sample `samtools flagstat` results into a project summary table (one row per sample, all metrics) and a summary figure showing the sorted per-sample mapping-rate curve and sample counts in the `<50 / 50–80 / 80–95 / ≥95` bins. Produced by `b` mode (`results/b-project/04_bam_summary/{project}.bam_mapping_summary.tsv` / `.pdf`) and by `pmr --mags m`|`v`|`vm`, which also gain a per-sample flagstat step (`results/pmr_*-sample/04_bam_summary/` and `results/pmr_*-project/04_bam_summary/`).
-- **Project-level MAG quality summary**: MAG-bearing workflows (`b`, `m`, `mc`, `mcr`, `vm`, `vmc`, `vmcr`, and `pmr --mags m`|`vm`, all skip-levels) now aggregate the per-sample CheckM stats into one table (one row per MAG, with an MIMAG `quality_tier` column) and a completeness-vs-contamination figure with marginal histograms: `results/b-project/08_MAG_quality_summary/{project}.MAG_quality_summary.tsv` / `.pdf`. Samples whose checkm table is empty (no MAGs) are skipped with a note instead of aborting the summary.
-- **pmr MAG reference uses dereplicated representatives**: the `--mags m`/`vm` quality gate previously listed QC-passed genomes by their own IDs, silently dropping non-representative genomes (not present in the dRep95 reference) and leaking rows marked `CheckM_filter` (MAGs excluded from dRep). The gate now maps each passing genome to its `dRep_95_representative` and drops `CheckM_filter` rows, so the gated list, the mapping reference, and the abundance matrix contain exactly the same genomes.
-- **Custom mMAG collections in pmr**: in `pmr --mags m`/`vm`, the `mMAG_dir` column now accepts mMAGs from any source (e.g. a reference genome collection or a mixed mMAG set shared by all samples), enabling cross-sample analysis of a custom genome collection; only contig-ID uniqueness per directory is required, and vMAGs cannot be supplied externally (documented in both READMEs and validated at startup).
-- **Fixed pmr quality-gate crash on missing summary table**: `pmr --mags v`/`vm` previously fed the 10_summary marker (empty) to the taxonomy filter whenever `vMAG_summary_info.tsv` did not exist yet at workflow-parse time (fresh workdirs, or after the table was cleaned), crashing the run. The gate now always reads the actual summary table via an explicit path.
-- **Reserved-delimiter and contig-ID validation**: sample names, user-provided contig FASTA headers, and mMAG file names/headers are now checked for `---` (Metalink's internal `sample---contig` / `genome---ORF` delimiter), and mMAG directories are checked for duplicate contig IDs across genomes (they collide in the concatenated mapping reference) when the workflow starts, with the exact file/line/header reported. In `pmr` this uniqueness check extends across all `mMAG_dir`s of the project (one shared mapping reference); sharing the same genome across samples/directories is allowed. Previously such inputs only failed deep inside the merge or mapping steps with cryptic errors.
-- **Fixed `--target-stage function` pulling in the taxonomy chain**: in `r` mode, function-only runs no longer run kraken2 taxonomy and bracken.
-
-
-### Metalink 0.3.8
-
-Release notes for Metalink 0.3.8 (2026-10-19).
-
-- **Faster database downloads**: Metalink-built database archives (kraken2 taxonomy/function, CAT_pack) are now downloaded with aria2c (16 parallel connections, resumable) when available, falling back to wget/curl. Especially helpful for users outside mainland China. `aria2` is included in the `metalink-main-0.3` environment.
-- **`--delete-archives` flag** for `metalink download-database`: downloaded archives are now kept in `DBDIR/downloads/` by default so databases can be re-extracted or copied without re-downloading; the flag (or `Delete_archives: true` in `config.download.yaml`) opts into deleting them after successful extraction.
-- **New r-mode options** `--reads-taxonomy-bracken-level` (default `S`) and `--reads-taxonomy-bracken-threshold` (default `0`), also available as `Params_r_sample.03_taxonomy.bracken_level` / `bracken_threshold` in the config.
-- **CLI argument validation**: misspelled or mistyped options are no longer silently swallowed as Snakemake passthrough arguments. Single-dash long options (`-merge-output-detail`), options belonging to another mode, and close misspellings now abort with a clear "did you mean" error.
-- **Post-run result warnings**: after each run Metalink scans the kraken2 reports produced during that run and warns if any sample had 0% classified sequences (taxonomy or function), or reads classified but none at the bracken level (bracken was skipped for them), with guidance on likely causes (reduced database / high confidence) and a pointer to the FAQ.
-- **Reduced kraken2 databases default to confidence 0**: when a reduced database (e.g. `kraken2_16GB`) is used — set explicitly or auto-detected from `DBDIR/.metalink_db_sizes.yaml` — newly generated configs default all kraken2 confidence thresholds (taxonomy and function, at every level) to 0, avoiding near-zero classification rates; full-database defaults (0.6/0.7 taxonomy, 0/0.05 function) are unchanged. Explicit CLI values always win, and the `--help` texts note both defaults.
-- **Bracken level option**: abundance estimation level is configurable via `-l` (default `S`).
-- **Bracken `-t` bug**: the rules passed `-t {threads}` (60) to bracken, whose `-t` is the minimum-reads reestimation threshold, not threads — samples with <60 reads at the target level failed with "no reads found". The threshold is now a proper parameter defaulting to 0.
-- **Single-virus vclust**: a sample with exactly one viral scaffold wrote cluster membership but never copied the genome FASTA into `vMAGs_clusters_fna/`, and the project-level copy loop skipped the entry because `unique_clusters` lacked a trailing newline. Previously this cascade produced an empty gated reference, zero coverage, and a crash at the project merge step.
-- **mclink module completeness robustness**: runs no longer crash on degenerate inputs — empty tables, `Unclassified` pseudo-rows (dropped with a warning), zero KOs/taxa/samples after filtering, or KOs with zero overlap with the KEGG module reference (e.g. viral-only samples). Each case logs a clear explanation; downstream filtering, heatmap, and merge steps skip gracefully.
-- **Project merge scripts** (`cat_Module_depth_mean`, `cat_KO_depth_mean`, `cat_KO_depth_dcast`): an empty per-sample file list or all-zero inputs now write header-only outputs with an explanatory note instead of aborting the workflow.
-- **0-row taxonomy tables** no longer crash `rename_GTDB_taxonomy_dataframe` (used by all mode merge scripts) with a `case_when` type error — e.g. when a project-level vMAG has no coverage in a sample.
-- **Rerun clean up**: `b_sample_06_bin_checkm` cleans its output directory before `checkm lineage_wf` (stale files made checkm fail on reruns); the mclink heatmap cleanup now also removes stale HTML (previously only PDFs).
-- **Quality-gate logging** (pmr_v/pmr_vm/pmr_m): explicit messages when no vMAG/mMAG passes the gate, and an explicit error when a reference would be built empty.
+- **Updated default dRep version**: `metalink/envs/metalink-annotation.yaml` now defaults to `drep =4.0.3` (previously 3.5.0), speeding up mMAG dereplication; the corresponding conda environment name is updated from `metalink-annotation-0.3` to `metalink-annotation-0.3.1`.
+- **Fixed sample- and project-level merge R scripts**: table merging could fail in some cases.

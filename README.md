@@ -82,8 +82,8 @@ The fastest way to get the Metalink CLI:
 
 ```bash
 # 1. Create a Python environment
-conda create -n metalink-0.3.11
-conda activate metalink-0.3.11
+conda create -n metalink-0.3.12
+conda activate metalink-0.3.12
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 2. Install Metalink from PyPI
@@ -113,8 +113,8 @@ git clone https://github.com/LiuyangLee/Metalink.git
 cd Metalink
 
 # 2. Create a Python environment for the Metalink CLI
-conda create -n metalink-0.3.11
-conda activate metalink-0.3.11
+conda create -n metalink-0.3.12
+conda activate metalink-0.3.12
 mamba install -c conda-forge -c bioconda python=3.11 snakemake=7.32.4 click ruamel.yaml graphviz
 
 # 3. Install Metalink CLI
@@ -124,8 +124,8 @@ pip install -e .
 #### Option 3: Bioconda Installation
 
 ```bash
-conda create -n metalink-0.3.11
-conda activate metalink-0.3.11
+conda create -n metalink-0.3.12
+conda activate metalink-0.3.12
 mamba install -c bioconda metalink
 ```
 
@@ -136,7 +136,7 @@ mamba install -c bioconda metalink
 #### Verify installation
 
 ```bash
-conda activate metalink-0.3.11
+conda activate metalink-0.3.12
 metalink --help
 metalink b --help
 ```

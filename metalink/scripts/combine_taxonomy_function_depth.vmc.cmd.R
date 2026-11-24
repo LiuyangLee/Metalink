@@ -287,7 +287,7 @@ cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Parameter --rank:',
 ##########################################################################
 
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract MAGs taxononmy from:',in_MAGs_tax_detail,'\n')
-MAG_tax_detail = fread(in_MAGs_tax_detail,  sep = "\t", header = T, data.table = F, fill = T)
+MAG_tax_detail = fread(in_MAGs_tax_detail,  sep = "\t", colClasses = list(character = 1), header = T, data.table = F, fill = T)
 colnames(MAG_tax_detail)[1] = "genome"
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'The number of MAGs used for analysis',nrow(MAG_tax_detail), '\n')
 
@@ -549,7 +549,7 @@ cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Total contigs extra
 ########################    virus MAGs taxononmy   ###########################
 ##########################################################################
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract virus MAGs taxononmy from:',in_vMAGs_tax_detail,'\n')
-virus_tax_detail = fread(in_vMAGs_tax_detail,  sep = "\t", #select = c(1,2,4),
+virus_tax_detail = fread(in_vMAGs_tax_detail,  sep = "\t", colClasses = list(character = 1), #select = c(1,2,4),
                          header = T, data.table = T, fill = T)
 colnames(virus_tax_detail)[1] = 'genome'
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'The number of virus MAGs used for analysis',nrow(virus_tax_detail), '\n')
@@ -621,7 +621,7 @@ expand_taxonomy_columns(virus_seqid_tax, CAMI_format_output, "genome")
 ####
 
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract ORF length of vMAGs from:',in_vMAGs_ffn_length,'\n')
-vMAGs_ffn_infor = in_vMAGs_ffn_length %>% {fread(., sep = '\t', header = T, data.table = T)}
+vMAGs_ffn_infor = in_vMAGs_ffn_length %>% {fread(., sep = '\t', colClasses = list(character = 1), header = T, data.table = T)}
 colnames(vMAGs_ffn_infor)[1:2] = c("genome","ORF")
 vMAGs_ffn_infor[, ORFLen := `ORF end` - `ORF start` + 1]
 n_na_orflen <- sum(is.na(vMAGs_ffn_infor$ORFLen))

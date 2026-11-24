@@ -334,7 +334,7 @@ expand_taxonomy_columns <- function(dt, CAMI_format_output) {
 
 process_read_tax_detail <- function(in_file, read_count, CAMI_format_output, taxid_taxonomy) {
   tryCatch({
-    dt <- fread(in_file, sep = "\t", select = c(2,3), header = FALSE, data.table = TRUE)
+    dt <- fread(in_file, sep = "\t", select = c(2,3), colClasses = c(V2 = "character"), header = FALSE, data.table = TRUE)
     setnames(dt, c("sample_Read", "taxid"))
     dt[, taxid := gsub(".* \\(taxid |\\)", "", taxid)]
     dt <- merge.data.table(dt, taxid_taxonomy, by = 'taxid', all.x = TRUE)

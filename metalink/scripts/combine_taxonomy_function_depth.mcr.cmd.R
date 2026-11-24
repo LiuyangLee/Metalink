@@ -408,7 +408,7 @@ load_taxid_function <- function(in_taxid_fun) {
 ##########################################################################
 
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Extract MAGs taxononmy from:',in_MAGs_tax_detail,'\n')
-MAG_tax_detail = fread(in_MAGs_tax_detail,  sep = "\t", header = T, data.table = F, fill = T)
+MAG_tax_detail = fread(in_MAGs_tax_detail,  sep = "\t", colClasses = list(character = 1), header = T, data.table = F, fill = T)
 colnames(MAG_tax_detail)[1] = "genome"
 cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'The number of MAGs used for analysis',nrow(MAG_tax_detail), '\n')
 
@@ -547,7 +547,7 @@ empty_result <- data.frame(
 process_read_tax_detail <- function(in_file, seq_len, CAMI_format_output, taxid_taxonomy,
                                     label = "read", fna_file = NULL) {
   tryCatch({
-    dt <- fread(in_file, sep = "\t", select = c(2,3), header = FALSE, data.table = TRUE)
+    dt <- fread(in_file, sep = "\t", select = c(2,3), colClasses = c(V2 = "character"), header = FALSE, data.table = TRUE)
     setnames(dt, c("sample_Read", "taxid"))
     dt[, taxid := gsub(".* \\(taxid |\\)", "", taxid)]
     dt <- merge.data.table(dt, taxid_taxonomy, by = 'taxid', all.x = TRUE)
@@ -559,7 +559,7 @@ process_read_tax_detail <- function(in_file, seq_len, CAMI_format_output, taxid_
     expand_taxonomy_columns(dt, "sample_Read", CAMI_format_output)
     if (!is.null(fna_file)) {
       cat(paste0('[',format(Sys.time(), "%Y-%m-%d %H:%M:%S"),']'),'Merge per-read fna_length for long-read singleton reads.\n')
-      read_fna_length = fread(fna_file, sep = '\t', header = T, data.table = T)[, c(1,2), with = FALSE]
+      read_fna_length = fread(fna_file, sep = '\t', header = T, colClasses = c("character", "numeric"), data.table = T)[, c(1,2), with = FALSE]
       colnames(read_fna_length) = c('sample_Read','SeqLen')
       dt <- merge.data.table(dt, read_fna_length, by = 'sample_Read', all.x = TRUE)
     } else {

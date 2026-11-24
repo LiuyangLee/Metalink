@@ -48,7 +48,7 @@ if (length(user_file) == 0) {
 for (file in user_file) {
   print(file)
   user.tmp <- data.table(fread(paste(user_Sample_in_DIR, file, sep = '/'),
-                               quote='',sep = '\t',header = T, check.names = FALSE))
+                               quote='',sep = '\t',header = T, colClasses = list(character = 1), check.names = FALSE))
   setnames(user.tmp, 1, 'Genome', skip_absent =T)
   n_na <- sum(is.na(user.tmp))
   if (n_na > 0) {
@@ -89,7 +89,7 @@ if (!is.null(tax_table) && tax_table != "") {
     # summary -- carry ALL columns of the filter table; when ranks use CAT/BAT
     # names (superkingdom..species), additionally prepend canonical
     # Domain..Species with trailing confidence scores stripped
-    dt <- data.table(fread(tax_files, quote = '', sep = '\t', header = TRUE, check.names = FALSE))
+    dt <- data.table(fread(tax_files, quote = '', sep = '\t', header = TRUE, colClasses = list(character = 1), check.names = FALSE))
     setnames(dt, 1, 'Genome', skip_absent = TRUE)
     for (i in seq_along(rank_from))
       if (rank_from[i] %in% colnames(dt) && !(rank_to[i] %in% colnames(dt)))
@@ -102,7 +102,7 @@ if (!is.null(tax_table) && tax_table != "") {
     # columns per table so both sides align on the same columns (no sparse
     # union); CAT/BAT rank names are renamed and scores stripped
     tax_list <- lapply(tax_files, function(f) {
-      dt <- data.table(fread(f, quote = '', sep = '\t', header = TRUE, check.names = FALSE))
+      dt <- data.table(fread(f, quote = '', sep = '\t', header = TRUE, colClasses = list(character = 1), check.names = FALSE))
       setnames(dt, 1, 'Genome', skip_absent = TRUE)
       for (i in seq_along(rank_from))
         if (rank_from[i] %in% colnames(dt) && !(rank_to[i] %in% colnames(dt)))
